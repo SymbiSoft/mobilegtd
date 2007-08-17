@@ -1,7 +1,7 @@
 + Wenn man neues Projekt anlegt fragt er zweimal nach Projektnamen
 + Ermöglichen, dass man keinen Key Shortcut anlegt
 + Inaktive Actions ausblenden
-Action.change_description implementieren und verwenden
++ Action.change_description implementieren und verwenden
 Schnellerer Zugriff auf zuletzt verwendete Projekte
 Actions in Today Ordner kopieren (Extra Programm?)
 Actions und Infos unter Cursor einfügen

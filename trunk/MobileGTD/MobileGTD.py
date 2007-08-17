@@ -14,7 +14,8 @@ file_log_level = 5
 gtd_directory = 'C:/Data/Aktenkoffer/GTD/'
 project_directory = gtd_directory+'@Projects/'
 review_directory = project_directory+'@Review/'
-
+done_directory = project_directory+'@Done/'
+someday_directory = project_directory+'@Someday/'
 project_dir_name = '@Projects/'
 codec = 'utf-8'
 unprocessed = 0
@@ -22,14 +23,23 @@ processed = 1
 done = 2
 tickled = 3
 inactive = 4
+someday = 5
 info = 2
+
+def invert_dictionary(dictionary):
+    return dict([[v,k] for k,v in dictionary.items()])
+
 sign_status_map = {u'+':done,u'-':processed,u'!':inactive,u'/':tickled,u'':unprocessed}
-status_sign_map = {done:u'+',processed:u'-',inactive:u'!',tickled:u'/',unprocessed:u''}
+status_sign_map = invert_dictionary(sign_status_map)
 status_string_map = {done:u'Done',processed:u'Processed',inactive:u'Inactive',tickled:u'Tickled',unprocessed:u'Unprocessed'}
+project_dir_status_map = {u'Done':done,u'Review':inactive,u'Someday':someday}
+status_project_dir_map = invert_dictionary(project_dir_status_map)
 file_name_regexp = re.compile('/?(?P<path>.*/)*(?P<file_name>.*)\....',re.U)
 action_regexp = re.compile('(?P<status>[+-/!])?\s*(?P<context>\S*)\s*(?P<description>[^\(]*)(\((?P<info>[^\)]*))?',re.U)
 context_regexp = re.compile('(?P<numbers>\d*)(?P<text>\D.*)',re.U)
 configuration_regexp = re.compile('(?P<key>[^:]*):(?P<value>.*)',re.U)
+
+INBOX = Inbox(EInbox)
 
 from UserDict import UserDict
 
@@ -107,16 +117,23 @@ def list_projects(root):
         #print 'In '+root+' found ', all_files
     return all_projects
 
-
-
-class Action:
+class ItemWithStatus(object):
+    def __init__(self,status=unprocessed):
+        self.status = status
+    def status_string(self):
+        if self.status == unprocessed:
+            return u''
+        else:
+            return u'%s '%status_sign_map[self.status]
+    
+class Action(ItemWithStatus):
 
     def __init__(self,description,context,project,info='',status=unprocessed):
+        super(Action, self).__init__(status)
         self.project = project
         self.description = description
         self.context = context
         self.info = info
-        self.status = status
 
     def update(self,path=gtd_directory):
         context_path = (u'%s/%s'%(path,self.context)).encode('utf-8')
@@ -136,18 +153,15 @@ class Action:
         return False
     def path(self,path=gtd_directory):
         return (u'%s/%s'%(path,self.context)).encode('utf-8')
-#===============================================================================
-#    def write(self):
-#        if (self.status == processed):
-#            self.process()
-#        if (self.status in [unprocessed,done]):
-#            self.remove()
-#===============================================================================
+
     def unprocess(self):
         self.status = unprocessed
         self.remove()
     def done(self):
         self.status = done
+        self.remove()
+    def deactivate(self):
+        self.status = inactive
         self.remove()
     def process(self):
         self.status = processed
@@ -168,7 +182,9 @@ class Action:
     def proposed_file_name(self):
         return (u'%s.act'%self.description).encode('utf-8')
     def set_description(self,description):
+        self.remove()
         self.description = description
+        self.process()
     def __repr__(self):
         advanced_info = ''
         if len(self.project)>0:
@@ -185,29 +201,27 @@ class Action:
             string = string+u'\nProject: %s'%self.project
         return string
     def project_file_string(self,entry_separator=' '):
-        return u'%s %s'%(self.status_string(),self.context_description_info())
+        return u'%s%s'%(self.status_string(),self.context_description_info())
     def context_description_info(self,entry_separator=' '):
         return u'%s%s%s%s%s'%(\
             self.context,entry_separator,\
             self.description,entry_separator,\
             self.info_string())
 
-    def status_string(self):
-        return status_sign_map[self.status]
     def info_string(self,entry_separator=' '):
         info_string = u''
         if (len(self.info) > 1):
             info_string = u'%s(%s)'%(entry_separator,self.info)
         return info_string
-    def search_project(self):
-        appuifw
 
-class Project:
+class Project(ItemWithStatus):
     def __init__(self,file_name):
         self.file_name=file_name
         self.actions=None
         self.infos=None
         self.dirty = False
+        super(Project, self).__init__(self.get_status_from_path())
+        log(u'Project %s is %s'%(self.name(),self.status))
 
     def read(self):
         if not os.path.isfile(self.file_name.encode('utf-8')):
@@ -243,11 +257,13 @@ class Project:
         if self.infos == None:
             self.read()
         return self.infos
+    def status_string(self):
+        if self.status == processed:
+            return u''
+        else:
+            return ItemWithStatus.status_string(self)
     def name_with_status(self):
-        status_string = u''
-        if self.scheduled_for_review():
-            status_string = u'! '
-        return status_string+self.name()
+        return self.status_string()+self.name()
     def name(self):
     #   print "Here"
         matching = file_name_regexp.match(self.file_name)
@@ -283,9 +299,22 @@ class Project:
         os.renames(self.file_name.encode('utf-8'),(new_file_name).encode('utf-8'))
         self.file_name = new_file_name
     def review(self):
+        self.status = inactive
         self.move_to(review_directory)
+    def set_done(self):
+        self.status = done
+        self.move_to(done_directory)
     def unreview(self):
+        self.status = processed
         self.move_to(project_directory)
+    def get_status_from_path(self):
+        status_string = self.status_part_of_path()
+        if status_string == 'Projects':
+            return processed
+        else:
+            return project_dir_status_map[status_string]
+    def status_part_of_path(self):
+        return self.path().split('/')[-1][1:]
     def scheduled_for_review(self):
         return self.path().endswith('@Review')
 
@@ -379,16 +408,26 @@ class SearchableListView(object):
             selected_item = self.selected_index()
         self.view.set_list(self.all_items(),selected_item)
         self.set_bindings_for_selection(selected_item)
+    def current_entry(self):
+        return self.entries[self.selected_index()]
 
 
 class EditableListView(SearchableListView):
     def __init__(self,title,binding_map):
         super(EditableListView, self).__init__(title,binding_map)
+    
+    def function_exists(self,function_name):    
+        return function_name in dir(self.current_entry())
+    
     def exec_if_function_exists(self,function_name):
-        entry = self.entries[self.selected_index()]
-        if function_name in dir(entry):
-            exec('entry.%s()'%function_name)
-            self.update()
+        if self.function_exists(function_name):
+            self.exec_and_update(function_name)
+            
+    def exec_and_update(self,function_name):
+        entry = self.current_entry()
+        exec('entry.%s()'%function_name)
+        self.update()
+
     def key_and_menu_bindings(self,selected_index):
         key_and_menu_bindings=[]
         for function in applicable_functions(self.entries[selected_index],self.binding_map)+\
@@ -399,10 +438,14 @@ class EditableListView(SearchableListView):
         return key_and_menu_bindings
     def should_bindings_change(self,old_index,new_index):
         return True
-        # TODO Nicht True, nur bei Bedarf
+        # TODO Return True only if necessary
 
     def change_entry(self):
         self.exec_if_function_exists('change')
+    def remove_entry(self):
+        if self.function_exists('remove'):
+            self.exec_and_update('remove')
+            #self.entries.remove(self.selected_index())
     def execute_and_update(self,function):
         return lambda: (function(),self.update(),self.index_changed())
     def all_items(self):
@@ -435,7 +478,6 @@ class ProjectListView(EditableListView):
         process(self.projects)
         self.update()
 
-INBOX = Inbox(EInbox)
 
 class SMSEntry:
     def __init__(self,sms_id,projects):
@@ -512,14 +554,16 @@ class ProjectEntry:
             self.project.add_info(info)
             self.project.write()
     def review(self):
-        appuifw.note(u'Scheduling %s for Review'%self.project.name())
+        #appuifw.note(u'Scheduling %s for Review'%self.project.name())
         self.project.review()
     def unreview(self):
-        appuifw.note(u'Scheduling %s as Active'%self.project.name())
+        #appuifw.note(u'Scheduling %s as Active'%self.project.name())
         self.project.unreview()
     def process(self):
         appuifw.note(u'Processing %s'%self.project.name())
         process_project(self.project)
+    def remove(self):
+        self.project.set_done()
     def list_repr(self):
         return self.project.name_with_status()
 
@@ -599,12 +643,13 @@ class ActionEntry:
     def process(self,action):
         action.process()
     def change_status(self):
-        if self.action.status == unprocessed:
+        
+        if self.action.status in [unprocessed,inactive]:
             self.action.process()
         elif self.action.status == processed:
             self.action.done()
         elif self.action.status == done:
-            self.action_to_info()
+            self.action.deactivate()
     def list_repr(self):
         return u'  %s %s'%(self.action.status_string(),self.action.description)
 
