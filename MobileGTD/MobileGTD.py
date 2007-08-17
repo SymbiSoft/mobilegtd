@@ -1,6 +1,4 @@
-                                                                     
-                                                                     
-                                                                     
+# SIS_VERSION = 0.8.1
                                              
 import os,re,codecs,sys,appuifw,traceback
 from inbox import EInbox,Inbox
@@ -11,12 +9,7 @@ console_encoding = "latin1"
 file_name_encoding = "utf-8"
 console_log_level = 2
 file_log_level = 5
-gtd_directory = 'C:/Data/Aktenkoffer/GTD/'
-project_directory = gtd_directory+'@Projects/'
-review_directory = project_directory+'@Review/'
-done_directory = project_directory+'@Done/'
-someday_directory = project_directory+'@Someday/'
-project_dir_name = '@Projects/'
+
 codec = 'utf-8'
 unprocessed = 0
 processed = 1
@@ -29,6 +22,7 @@ info = 2
 def invert_dictionary(dictionary):
     return dict([[v,k] for k,v in dictionary.items()])
 
+
 sign_status_map = {u'+':done,u'-':processed,u'!':inactive,u'/':tickled,u'':unprocessed}
 status_sign_map = invert_dictionary(sign_status_map)
 status_string_map = {done:u'Done',processed:u'Processed',inactive:u'Inactive',tickled:u'Tickled',unprocessed:u'Unprocessed'}
@@ -36,10 +30,64 @@ project_dir_status_map = {u'Done':done,u'Review':inactive,u'Someday':someday}
 status_project_dir_map = invert_dictionary(project_dir_status_map)
 file_name_regexp = re.compile('/?(?P<path>.*/)*(?P<file_name>.*)\....',re.U)
 action_regexp = re.compile('(?P<status>[+-/!])?\s*(?P<context>\S*)\s*(?P<description>[^\(]*)(\((?P<info>[^\)]*))?',re.U)
-context_regexp = re.compile('(?P<numbers>\d*)(?P<text>\D.*)',re.U)
+context_regexp = re.compile('(?P<numbers>\d*)(?P<text>\D?.*)',re.U)
 configuration_regexp = re.compile('(?P<key>[^:]*):(?P<value>.*)',re.U)
 
-INBOX = Inbox(EInbox)
+
+def log(text,level=0):
+    if level < file_log_level:
+        log_file.write(text.encode('utf-8')+'\n')
+    if level < console_log_level:
+            #appuifw.note(u''+repr(text))
+#        try:
+            #print ' '*level,text.encode(console_encoding)
+            log_entries.append(u' '*level+text)
+#        except:
+#            print ' '*level,repr(text.encode(console_encoding))
+
+
+def guess_encoding(data):
+    encodings = ['ascii','utf-8','utf-16']
+    successful_encoding = None
+    if data[:3]=='\xEF\xBB\xBF':
+        log('Unicode BOM in %s'%repr(data),6)
+        data = data[3:]
+
+    for enc in encodings:
+        if not enc:
+            continue
+        try:
+            decoded = unicode(data, enc)
+            successful_encoding = enc
+            break
+        except (UnicodeError, LookupError):
+            pass
+    if successful_encoding is None:
+        raise UnicodeError('Unable to decode input data %s. Tried the'
+            ' following encodings: %s.' %(repr(data), ', '.join([repr(enc)
+                for enc in encodings if enc])))
+    else:
+        log('Decoded %s to %s'%(repr(data),repr(decoded)),6)
+
+        return (decoded, successful_encoding)
+
+
+
+
+def read_text_from_file(unicode_file_name):
+    #print repr(file_name),type(file_name)
+    f=file(unicode_file_name.encode('utf-8'),'r')
+    raw=f.read()
+    (text,encoding)=guess_encoding(raw)
+
+    return text
+def parse_file_to_line_list(unicode_complete_path):
+    text = read_text_from_file(unicode_complete_path)
+    #log(text)
+    lines = text.splitlines()
+    #print lines
+    return lines
+
 
 from UserDict import UserDict
 
@@ -85,13 +133,28 @@ def read_configuration(file_name,ordered=False):
 
 
 
-def read_text_from_file(unicode_file_name):
-    #print repr(file_name),type(file_name)
-    f=file(unicode_file_name.encode('utf-8'),'r')
-    raw=f.read()
-    (text,encoding)=guess_encoding(raw)
 
-    return text
+
+main_config_file = 'C:/System/Data/mobile_gtd.cfg'
+
+COMMON_CONFIG = read_configuration(main_config_file)
+gtd_directory = COMMON_CONFIG['path'].encode('utf-8')
+project_directory = gtd_directory+'@Projects/'
+review_directory = project_directory+'@Review/'
+done_directory = project_directory+'@Done/'
+someday_directory = project_directory+'@Someday/'
+project_dir_name = '@Projects/'
+
+log_file=file(gtd_directory+'gtd.log','w')
+log_entries=[]
+
+
+
+
+INBOX = Inbox(EInbox)
+
+
+
 
 def safe_chdir(path_unicode):
     try:
@@ -696,9 +759,6 @@ def process(projects,path=gtd_directory):
     inactive_projects=[]
     for project in projects:
         process_project(project)
-    #log('Inactive projects:')
-    #for project in inactive_projects:
-    #    log(project.name(),1)
     return True
 
 def process_project(project):
@@ -794,10 +854,8 @@ def parse_lines(lines):
 
 
 def parse_action(string):
-    #print repr(string),type(string)
     matching = action_regexp.match(string)
     description = matching.group('description').rstrip(u' \r\n')
-    #print repr(description),type(description)
     status_string = matching.group('status')
     if (status_string == None):
         status_string = u''
@@ -806,7 +864,6 @@ def parse_action(string):
     context = parse_context(matching.group('context'))
     if(info==None):
         info=u''
-    #print 'Action:',context,description,status
     return Action(description,context,u'',info,status)
 def parse_context(context):
     context_matching = context_regexp.match(context)
@@ -823,55 +880,8 @@ def parse_context(context):
 def compare_by_status(x,y):
     return y.status - x.status
 
-def parse_file_to_line_list(unicode_complete_path):
-    text = read_text_from_file(unicode_complete_path)
-    #log(text)
-    lines = text.splitlines()
-    #print lines
-    return lines
 
 
-
-
-
-def guess_encoding(data):
-    encodings = ['ascii','utf-8','utf-16']
-    successful_encoding = None
-    if data[:3]=='\xEF\xBB\xBF':
-        log('Unicode BOM in %s'%repr(data),6)
-        data = data[3:]
-
-    for enc in encodings:
-        if not enc:
-            continue
-        try:
-            decoded = unicode(data, enc)
-            successful_encoding = enc
-            break
-        except (UnicodeError, LookupError):
-            pass
-    if successful_encoding is None:
-        raise UnicodeError('Unable to decode input data %s. Tried the'
-            ' following encodings: %s.' %(repr(data), ', '.join([repr(enc)
-                for enc in encodings if enc])))
-    else:
-        log('Decoded %s to %s'%(repr(data),repr(decoded)),6)
-
-        return (decoded, successful_encoding)
-
-
-log_file=file(gtd_directory+'gtd.log','w')
-log_entries=[]
-def log(text,level=0):
-    if level < file_log_level:
-        log_file.write(text.encode('utf-8')+'\n')
-    if level < console_log_level:
-            #appuifw.note(u''+repr(text))
-#        try:
-            #print ' '*level,text.encode(console_encoding)
-            log_entries.append(u' '*level+text)
-#        except:
-#            print ' '*level,repr(text.encode(console_encoding))
 lock=None
 def no_action():
     pass
@@ -907,64 +917,43 @@ def all_key_values():
 #    for key_name in all_key_names():
 #        exec('key_values.append(%s)'%key_name)
     return key_values
-##os.chdir()
+
 def applicable_functions(obj,allowed_function_names):
     #log('Looking for functions for %s'%obj)
     function_names = [function_name for function_name in dir(obj) if function_name in allowed_function_names]
     return [eval('obj.%s'%function_name) for function_name in function_names]
 
-possible_action_names=[u'New Action',u'Process']
-possible_actions=[lambda: new_action(all_projects),lambda: process(list_projects(project_directory))]
 try:
-    #log('\n'.join(all_key_names()))
 
     ABBREVIATIONS = read_configuration(gtd_directory+"abbreviations.cfg")
-    COMMON_CONFIG = read_configuration(gtd_directory+"gtd.cfg")
     PROJECT_LIST_KEYS_AND_MENU = read_configuration(gtd_directory+"projects.cfg",True)
-
-    #PROJECT_LIST_MENU = read_configuration(gtd_directory+"projects.menu",True)
     ACTION_LIST_KEYS_AND_MENU = read_configuration(gtd_directory+"actions.cfg",True)
     #ACTION_LIST_MENU = read_configuration(gtd_directory+"actions.menu",True)
-    #log(u'Configuration')
-    #log(repr(COMMON_CONFIG))
-    #log(repr(ACTION_LIST_KEYS_AND_MENU))
+    log(u'Configuration')
+    log(repr(COMMON_CONFIG))
+    log(u'Abbreviations')
+    log(repr(ABBREVIATIONS))
+    log(u'Keys and Menus')
+    log(repr(ACTION_LIST_KEYS_AND_MENU))
     all_projects=lambda:list_projects(project_directory)+list_projects(review_directory)
     projects_view = ProjectListView(all_projects)
     projects_view.run()
-#===============================================================================
-#    go_on = True
-#    while(go_on):
-#        selected_action=appuifw.popup_menu(possible_action_names)
-#        if selected_action == None:
-#            go_on = False
-#        else:
-#            go_on=possible_actions[selected_action]()
-#            appuifw.popup_menu(log_entries)
-#            log_entries=[]
-#    #process(active_projects)
-#===============================================================================
 except Exception, e:
-    #try:
-        #appuifw.note()
-        error_text = unicode(repr(e.args))
-        #log(error_text)
-        t = appuifw.Text()
-        t.add(error_text)
-        for trace_line in traceback.extract_tb(sys.exc_info()[2]):
-            formatted_trace_line = u'\nIn %s line %s: %s "%s"'%trace_line
-            log(formatted_trace_line,1)
-            t.add(formatted_trace_line)
-            #(filename, line number, function name, text)
-        appuifw.app.menu=[(u'Exit', exit)]
+    error_text = unicode(repr(e.args))
+    #log(error_text)
+    t = appuifw.Text()
+    t.add(error_text)
+    for trace_line in traceback.extract_tb(sys.exc_info()[2]):
+        formatted_trace_line = u'\nIn %s line %s: %s "%s"'%trace_line
+        log(formatted_trace_line,1)
+        t.add(formatted_trace_line)
+        #(filename, line number, function name, text)
+    appuifw.app.menu=[(u'Exit', exit)]
 
-        appuifw.title=u'Error'
-        appuifw.app.body=t
-        lock = Ao_lock()
-        appuifw.app.exit_key_handler=exit
-        lock.wait()
-        #appuifw.popup_menu(log_entries)
+    appuifw.title=u'Error'
+    appuifw.app.body=t
+    lock = Ao_lock()
+    appuifw.app.exit_key_handler=exit
+    lock.wait()
 
-    #finally:
-    #    trace = None
 log_file.close()
-#appuifw.note(u'\n'.join(log_entries))
