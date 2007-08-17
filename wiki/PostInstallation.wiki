@@ -1,0 +1,15 @@
+#summary Post installation instructions.
+#labels Featured
+
+= Setting up the configuration =
+== Configuring the path of your GTD data ==
+After installing the MobileGTD and the MobileGTDData package you have a GTD directory `C:\Data\GTD`. If you want to change this move the directory somewhere else and update the main configuration file `C:\system\data\mobile_gtd.cfg`
+== Configuring abbreviations ==
+In your GTD directory there is a configuration file called `abbreviations.cfg`. Edit it to reflect your wishes.
+== Key shortcuts and menu entries ==
+In your GTD directory there are two configuration files called `actions.cfg` and `projects.cfg`.
+Each one contains several lines in the following format:
+{{{
+function_name:key_shortcut, String for menu entry
+}}}
+You can change the key shortcuts and the menu strings but you *must* keep the function names.
