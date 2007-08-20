@@ -2,11 +2,11 @@
 + Ermöglichen, dass man keinen Key Shortcut anlegt
 + Inaktive Actions ausblenden
 + Action.change_description implementieren und verwenden
-Schnellerer Zugriff auf zuletzt verwendete Projekte
-Actions in Today Ordner kopieren (Extra Programm?)
-Actions und Infos unter Cursor einfügen
-Actions und Infos umsortieren
-Statuswechsel für Projekte
-Als Dämon
-Funktion write_to_encoded_file einführen
++ Schnellerer Zugriff auf zuletzt verwendete Projekte
++ Actions in Today Ordner kopieren (Extra Programm?)
++ Actions und Infos unter Cursor einfügen
++ Actions und Infos umsortieren
++ Statuswechsel für Projekte
++ Als Dämon
++ Funktion write_to_encoded_file einführen
 + SMS Eingang in Projekte umwandeln
