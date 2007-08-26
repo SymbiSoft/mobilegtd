@@ -23,7 +23,7 @@ def invert_dictionary(dictionary):
     return dict([[v,k] for k,v in dictionary.items()])
 
 
-sign_status_map = {u'+':done,u'-':processed,u'!':inactive,u'/':tickled,u'':unprocessed}
+sign_status_map = {u'+':done,u'-':processed,u'!':inactive,u'/':tickled,u'':unprocessed,u'~':someday}
 status_sign_map = invert_dictionary(sign_status_map)
 status_string_map = {done:u'Done',processed:u'Processed',inactive:u'Inactive',tickled:u'Tickled',unprocessed:u'Unprocessed'}
 project_dir_status_map = {u'Done':done,u'Review':inactive,u'Someday':someday}
@@ -143,6 +143,7 @@ project_directory = gtd_directory+'@Projects/'
 review_directory = project_directory+'@Review/'
 done_directory = project_directory+'@Done/'
 someday_directory = project_directory+'@Someday/'
+tickled_directory = project_directory+'@Tickled/'
 project_dir_name = '@Projects/'
 
 log_file=file(gtd_directory+'gtd.log','w')
@@ -168,17 +169,6 @@ def safe_chdir(path_unicode):
 
 
 
-def list_projects(root):
-    all_projects =[]
-    if not os.path.exists(root):
-        return []
-    for name in os.listdir(root):
-        if (name.endswith('.prj')):
-            project_file_name = unicode(os.path.join(root, name),file_name_encoding)
-            #print repr(project)
-            all_projects.append(Project(project_file_name))
-        #print 'In '+root+' found ', all_files
-    return all_projects
 
 class ItemWithStatus(object):
     def __init__(self,status=unprocessed):
@@ -283,7 +273,7 @@ class Project(ItemWithStatus):
         self.actions=None
         self.infos=None
         self.dirty = False
-        super(Project, self).__init__(self.get_status_from_path())
+        super(Project, self).__init__(self.get_status())
         log(u'Project %s is %s'%(self.name(),self.status))
 
     def read(self):
@@ -370,7 +360,13 @@ class Project(ItemWithStatus):
     def unreview(self):
         self.status = processed
         self.move_to(project_directory)
-    def get_status_from_path(self):
+    def set_someday(self):
+        self.status = someday
+        self.move_to(someday_directory)
+    def tickle(self):
+        self.status = tickled
+        self.move_to(tickled_directory)
+    def get_status(self):
         status_string = self.status_part_of_path()
         if status_string == 'Projects':
             return processed
@@ -380,6 +376,73 @@ class Project(ItemWithStatus):
         return self.path().split('/')[-1][1:]
     def scheduled_for_review(self):
         return self.path().endswith('@Review')
+    def set_name(self,name):
+        self.write()
+        new_file_name = u'%s/%s.prj'%(self.path(),name)
+        
+        log(u'Renaming to %s'%new_file_name)
+        os.renames(self.file_name.encode('utf-8'),(new_file_name).encode('utf-8'))
+        self.file_name = new_file_name
+    def process(self):
+            project_changed = False
+            #log(u'Updating %s'%project,1)
+            for action in self.get_actions():
+                #log(u'%s'%action,2)
+                changed = action.update()
+                if (changed):
+                        self.dirty = True
+                        log(u'%s %s'%(status_string_map[action.status],action.description),2)
+            if self.dirty:
+                log(self.name(),1)
+                self.write()
+            if not self.has_active_actions():
+                log('Inactive: %s'%self.name(),0)
+                self.review()
+                #inactive_projects.append(project)
+
+class Projects:
+    def __init__(self):
+        self.root = project_directory
+        self.all_projects =[]
+        
+    def update(self):
+        self.all_projects = self.read(self.root) + \
+            self.read(review_directory) + \
+            self.read(someday_directory)
+    def read(self,root,recursive=false):
+        all_projects = []
+        if not os.path.exists(root):
+            return []
+        for name in os.listdir(root):
+            if (name.endswith('.prj')):
+                project_file_name = unicode(os.path.join(root, name),file_name_encoding)
+                #print repr(project)
+                all_projects.append(Project(project_file_name))
+            #print 'In '+root+' found ', all_files
+        return all_projects
+    def get_all_projects(self):
+        return self.read(self.root) + \
+            self.read(review_directory) + \
+            self.read(tickled_directory) + \
+            self.read(someday_directory)
+    def get_active_projects(self):
+        return self.read(self.root) + \
+            self.read(review_directory)
+    def get_inactive_projects(self):
+        return self.read(tickled_directory) + \
+            self.read(someday_directory)
+    def get_review_projects(self):
+        return self.read(review_directory)
+    
+    def add_project(self,project):
+        self.all_projects.insert(0,project)
+        
+    def process(self):
+        log(u'Updating Projects:')
+        inactive_projects=[]
+        for project in self.get_active_projects():
+            project.process()
+        return True
 
 def save_gui(object):
     object.old_gui = appuifw.app.body
@@ -395,10 +458,15 @@ def restore_gui(object):
     appuifw.app.title = object.title
 
 class SearchableListView(object):
-    def __init__(self,title,binding_map):
+    def __init__(self,title,entry_filters,binding_map):
         self.title = title
         self.binding_map = binding_map
+        self.current_entry_filter_index = 0
+        self.entry_filters = entry_filters
+        self.entry_filter = self.entry_filters[0]
+        self.entries = self.generate_entries()
         self.view = appuifw.Listbox(self.all_items(),self.change_entry)
+
     def run(self):
         self.old_index = None
         self.adjustment = None
@@ -473,11 +541,19 @@ class SearchableListView(object):
         self.set_bindings_for_selection(selected_item)
     def current_entry(self):
         return self.entries[self.selected_index()]
-
+    def switch_entry_filter(self):
+        self.current_entry_filter_index += 1
+        self.entry_filter = self.entry_filters[self.current_entry_filter_index % len(self.entry_filters)]
+        self.regenerate_entries()
+    def all_items(self):
+        return [entry.list_repr() for entry in self.entries]
+    def regenerate_entries(self):
+        self.entries = self.generate_entries()
+        self.update()
 
 class EditableListView(SearchableListView):
-    def __init__(self,title,binding_map):
-        super(EditableListView, self).__init__(title,binding_map)
+    def __init__(self,title,entry_filters,binding_map):
+        super(EditableListView, self).__init__(title,entry_filters,binding_map)
     
     def function_exists(self,function_name):    
         return function_name in dir(self.current_entry())
@@ -511,34 +587,29 @@ class EditableListView(SearchableListView):
             #self.entries.remove(self.selected_index())
     def execute_and_update(self,function):
         return lambda: (function(),self.update(),self.index_changed())
-    def all_items(self):
-        self.update_entries()
-        return [entry.list_repr() for entry in self.entries]
+    def change_status(self):
+        self.exec_if_function_exists('change_status')
 
 class ProjectListView(EditableListView):
-    def __init__(self,project_search):
-        self.project_search = project_search
-        self.projects = self.project_search()
-        #self.menu_bindings = [(description,eval('self.%s'%function)) for (function,(key,description)) in PROJECT_LIST_KEYS_AND_MENU.items()]
-        super(ProjectListView, self).__init__(u'Projects', PROJECT_LIST_KEYS_AND_MENU)
-        self.selected_project = 0
+    def __init__(self,projects):
+        self.projects = projects
+        super(ProjectListView, self).__init__(u'Projects', [projects.get_active_projects,projects.get_all_projects,projects.get_review_projects,projects.get_inactive_projects],PROJECT_LIST_KEYS_AND_MENU)
 
-    def update_entries(self):
-        self.entries = []
-        self.entries.append(NewProjectEntry(self.projects))
-        self.entries.append(NoProjectEntry())
-        self.entries.extend([ProjectEntry(project) for project in self.projects])
+    def generate_entries(self):
+        entries = []
+        entries.append(NewProjectEntry(self.projects))
+        entries.append(NoProjectEntry())
+        entries.extend([ProjectEntry(project) for project in self.entry_filter()])
         try:
-            self.entries.extend([SMSEntry(sms_id,self.projects) for sms_id in Inbox(EInbox).sms_messages()])
+            entries.extend([SMSEntry(sms_id,self.projects) for sms_id in Inbox(EInbox).sms_messages()])
         except Exception,e:
             log(u'No permission to access SMS inbox')
             log(unicode(repr(e.args)))
-    def update_projects(self):
-        self.projects = self.project_search()
-        self.update()
+        return entries
+
     def process_all(self):
         appuifw.note(u'Processing all Projects')
-        process(self.projects)
+        self.projects.process()
         self.update()
 
 
@@ -592,7 +663,7 @@ class NewProjectEntry:
     def change(self):
         project = new_project()
         if project:
-            self.projects.insert(0,project)
+            self.projects.add_project(project)
             project.write()
     def list_repr(self):
         return u'New project'
@@ -624,43 +695,51 @@ class ProjectEntry:
         self.project.unreview()
     def process(self):
         appuifw.note(u'Processing %s'%self.project.name())
-        process_project(self.project)
+        self.project.process()
+        
+    def rename(self):
+        new_name = appuifw.query(u'Enter new project name','text',u'%s'%self.project.name())
+        if new_name != None:
+            self.project.set_name(new_name)
     def remove(self):
         self.project.set_done()
     def list_repr(self):
         return self.project.name_with_status()
+    def change_status(self):
+        status = self.project.get_status()
+        if status == processed:
+            self.project.review()
+        elif status == inactive:
+            self.project.tickle()
+        elif status == tickled:
+            self.project.set_someday()            
+        else:
+            self.project.unreview()
 
 class ActionListView(EditableListView):
     def __init__(self,project):
         self.project = project
-        self.action_filters = [self.project.get_actions,self.project.active_actions,self.project.inactive_actions]
-        self.current_action_filter_index = 0
-        self.action_filter = self.project.get_actions
-        super(ActionListView, self).__init__(u'Actions and Info',  ACTION_LIST_KEYS_AND_MENU)
+        super(ActionListView, self).__init__(u'Actions and Info', [self.project.get_actions,self.project.active_actions,self.project.inactive_actions], ACTION_LIST_KEYS_AND_MENU)
 
     def exit(self):
         EditableListView.exit(self)
         self.project.write()
 
-    def switch_action_filter(self):
-        self.current_action_filter_index += 1
-        self.action_filter = self.action_filters[self.current_action_filter_index % len(self.action_filters)]
-        self.update()
     def actions(self):
-        return self.action_filter()
+        return self.entry_filter()
     def infos(self):
         return self.project.get_infos()
-    def update_entries(self):
-        self.entries = []
-        self.entries.append(InfosEntry(self.project))
+    def generate_entries(self):
+        entries = []
+        entries.append(InfosEntry(self.project))
         infos = self.infos()
         for info in infos:
-            self.entries.append(InfoEntry(info,self.project))
+            entries.append(InfoEntry(info,self.project))
         for (context,actions) in self.actions_by_context().items():
-            self.entries.append(ContextEntry(context,self.project))
+            entries.append(ContextEntry(context,self.project))
             for action in actions:
-                self.entries.append(ActionEntry(action,self.project))
-
+                entries.append(ActionEntry(action,self.project))
+        return entries
     def actions_by_context(self):
         context_actions_map = {}
         for action in self.actions():
@@ -680,10 +759,9 @@ class ActionListView(EditableListView):
         info = ask_for_info(self.project.name())
         if info:
             self.project.add_info(info)
-    def remove_entry(self):
-        self.exec_if_function_exists('remove')
-    def change_status(self):
-        self.exec_if_function_exists('change_status')
+#    def remove_entry(self):
+#        self.exec_if_function_exists('remove')
+
 
 class ActionEntry:
     def __init__(self,action,project):
@@ -754,29 +832,7 @@ class InfosEntry:
     def list_repr(self):
         return u'Infos'
 
-def process(projects,path=gtd_directory):
-    log(u'Updating Projects:')
-    inactive_projects=[]
-    for project in projects:
-        process_project(project)
-    return True
 
-def process_project(project):
-        project_changed = False
-        #log(u'Updating %s'%project,1)
-        for action in project.get_actions():
-            #log(u'%s'%action,2)
-            changed = action.update()
-            if (changed):
-                    project.dirty = True
-                    log(u'%s %s'%(status_string_map[action.status],action.description),2)
-        if project.dirty:
-            log(project.name(),1)
-            project.write()
-        if not project.has_active_actions():
-            log('Inactive: %s'%project.name(),0)
-            project.review()
-            #inactive_projects.append(project)
 
 def new_project(proposed_name=u'',info=None):
     if not info:
@@ -935,8 +991,8 @@ try:
     log(repr(ABBREVIATIONS))
     log(u'Keys and Menus')
     log(repr(ACTION_LIST_KEYS_AND_MENU))
-    all_projects=lambda:list_projects(project_directory)+list_projects(review_directory)
-    projects_view = ProjectListView(all_projects)
+    projects = Projects()
+    projects_view = ProjectListView(projects)
     projects_view.run()
 except Exception, e:
     error_text = unicode(repr(e.args))
