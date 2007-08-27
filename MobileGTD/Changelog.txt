@@ -1,0 +1,5 @@
+0.8.5:
+- Added filter functionality for projects
+- Added function to set project status
+- Added function to rename projects
+- Reads tickled and someday folders as well (hidden by default)
