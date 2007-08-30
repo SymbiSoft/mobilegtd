@@ -39,7 +39,9 @@ MobileGTD will ask for the project string, which is described a little down this
 You can use `5` to process a single project and `6` to process all projects. When processing projects MobileGTD searches for deleted action files and marks their corresponding entries in the project file as `done`. All projects for which no active actions exist will be marked as `Review`. In the project list view these projects have a `!` in front of their name.
 == Changing project status ==
 You can change a projects status by pressing `7`. At the moment the sequence of states is (though I might change it or make it configurable):
-Processed ('') -> Review ('!') -> Tickled ('/') -> Someday ('~') -> Processed[br]
+
+Processed ('') -> Review ('!') -> Tickled ('/') -> Someday ('~') -> Processed
+
 The sign inside the braces will get displayed in front of the project name.
 
 You can also press `8` to set a projects status to processed (unluckily called `Unreview` at the moment).
@@ -65,7 +67,8 @@ Context Description (Info)
 Contexts can be nested so you can e.g. use `Errands/Walmart`.
 You can also define and use abbreviations for contexts (see [PostInstallation]).
 One abbreviation I have defined for example is `26` which gets expanded to `Computer/Online` or `266` which gets expanded to `Computer/Online/Mail` (I tried to find context names that enable me to do a 1-to-1 mapping from the first letter of the context to its key on the phone).
-You can also write `266Joe` which would get expanded to `Computer/Online/Mail/Joe`. Notice that I did not put a space between the numbers and the word following it. This tells MobileGTD to interpret `Joe` as part of the context. This is quite handy for the mail and agenda contexts.[br]
+You can also write `266Joe` which would get expanded to `Computer/Online/Mail/Joe`. Notice that I did not put a space between the numbers and the word following it. This tells MobileGTD to interpret `Joe` as part of the context. This is quite handy for the mail and agenda contexts.
+
 *Warning:* Do not use `?` or other signs that cannot be used in file names.
 
 
@@ -76,5 +79,7 @@ The *Description* is what you will read when browing your action files. It shoul
 *Info* is the place where you can put informations specific to that action e.g. the telephone number of the person you want to call. This information does not get displayed in the project details view (though I might implement that one day).
 == Changing action status ==
 You can change the status of actions by pressing `7`. At the moment the sequence of states is (though I might change it or make it configurable):
-Active ('-') -> Inactive/Later ('!') -> Done ('+') -> Active[br]
+
+Active ('-') -> Inactive/Later ('!') -> Done ('+') -> Active
+
 Active is the only status in which a corresponding action file exists. When you change an active actions status to Inactive or Done the action file will be removed.
