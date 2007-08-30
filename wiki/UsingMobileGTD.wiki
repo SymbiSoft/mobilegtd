@@ -1,4 +1,6 @@
 #summary How to use MobileGTD
+#labels Featured
+It's best to read the following having your phone at hand and MobileGTD installed. After or while reading create some example projects and play around a little. I think the application is quite intuitive.
 = The whole picture =
 MobileGTD supports you in processing and reviewing your projects, for browsing your actions you use any file explorer you like.
 == How it works ==
@@ -63,10 +65,16 @@ Context Description (Info)
 Contexts can be nested so you can e.g. use `Errands/Walmart`.
 You can also define and use abbreviations for contexts (see [PostInstallation]).
 One abbreviation I have defined for example is `26` which gets expanded to `Computer/Online` or `266` which gets expanded to `Computer/Online/Mail` (I tried to find context names that enable me to do a 1-to-1 mapping from the first letter of the context to its key on the phone).
-You can also write `266Joe` which would get expanded to `Computer/Online/Mail/Joe`. Notice that I did not put a space between the numbers and the word following it. This tells MobileGTD to interpret `Joe` as part of the context. This is quite handy for the mail and agenda contexts.
+You can also write `266Joe` which would get expanded to `Computer/Online/Mail/Joe`. Notice that I did not put a space between the numbers and the word following it. This tells MobileGTD to interpret `Joe` as part of the context. This is quite handy for the mail and agenda contexts.[[br]]
+*Warning:* Do not use `?` or other signs that cannot be used in file names.
 
 
 The *Description* is what you will read when browing your action files. It should be something like `Imagine myself as being a black-belt GTD user`. It usually starts with or contains a verb, but some contexts are so self-defining that I do not use a verb (e.g. for mail or agenda actions I would just write what I want to say to or ask the person).
+*Warning:* Do not use `?`, `/` or other signs that cannot be used in file names.
 
 
 *Info* is the place where you can put informations specific to that action e.g. the telephone number of the person you want to call. This information does not get displayed in the project details view (though I might implement that one day).
+== Changing action status ==
+You can change the status of actions by pressing `7`. At the moment the sequence of states is (though I might change it or make it configurable):
+Active ('-') -> Inactive/Later ('!') -> Done ('+') -> Active[[br]]
+Active is the only status in which a corresponding action file exists. When you change an active actions status to Inactive or Done the action file will be removed.
