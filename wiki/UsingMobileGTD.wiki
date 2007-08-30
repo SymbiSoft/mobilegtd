@@ -19,11 +19,16 @@ An action string looks like this:
 {{{
 Context Description (Info)
 }}}
-Context is the place or occasion where you can do the action, e.g. `Computer`,`Home`,`Errands`...
+
+
+*Context* is the place or occasion where you can do the action, e.g. `Computer`,`Home`,`Errands`...
 Contexts can be nested so you can e.g. use `Errands/Walmart`.
 You can also define and use abbreviations for contexts (see [PostInstallation]).
 One abbreviation I have defined for example is `26` which gets expanded to `Computer/Online` or `266` which gets expanded to `Computer/Online/Mail` (I tried to find context names that enable me to do a 1-to-1 mapping from the first letter of the context to its key on the phone).
 You can also write `266Joe` which would get expanded to `Computer/Online/Mail/Joe`. Notice that I did not put a space between the numbers and the word following it. This tells MobileGTD to interpret `Joe` as part of the context. This is quite handy for the mail and agenda contexts.
 
 
+The *Description* is what you will read when browing your action files. It should be something like `Imagine myself as being a black-belt GTD user`. It usually starts with or contains a verb, but some contexts are so self-defining that I do not use a verb (e.g. for mail or agenda actions I would just write what I want to say to or ask the person).
 
+
+*Info* is the place where you can put informations specific to that action e.g. the telephone number of the person you want to call. This information does not get displayed in the project details view (though I might implement that one day).
