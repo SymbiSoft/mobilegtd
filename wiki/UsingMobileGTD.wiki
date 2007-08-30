@@ -1,0 +1,29 @@
+#summary How to use MobileGTD
+= Projects View =
+== Navigating ==
+You can navigate your project list by using your cursor buttons. Alternatively you can search for projects by pressing `0` and entering one of the contained words.
+== Creating a new project ==
+To create a new project choose the `New Project` entry in the project list. You can always get there quickly by pressing `0` and then your select key (usually in the center of your cursor buttons). Press the select key again to create the project. MobileGTD will ask for a project name (can be changed starting with 0.8.5) and insert the new project at the start of the list.
+== Creating a single action ==
+To create a single action choose the `No Project` entry. You should use this with caution, almost all actions belong to a project that you might not have discovered yet (even writing a mail usually involves waiting for a response).
+MobileGTD will ask for the project string, which is described a little down this page.
+
+= Project Details View =
+Careful: Projects are saved only when you exit the project details view. Be sure not to exit the application incidentally by pressing the Hang-Up button before exiting the project details view.
+== Adding an info ==
+To add an info simply press `4` and type the info you want to add. This can be used for desired outcomes and auxiliary information.
+== Adding an action ==
+To add an action press `2`. MobileGTD will ask for the action string.
+=== Action strings ===
+An action string looks like this:
+{{{
+Context Description (Info)
+}}}
+Context is the place or occasion where you can do the action, e.g. `Computer`,`Home`,`Errands`...
+Contexts can be nested so you can e.g. use `Errands/Walmart`.
+You can also define and use abbreviations for contexts (see [PostInstallation]).
+One abbreviation I have defined for example is `26` which gets expanded to `Computer/Online` or `266` which gets expanded to `Computer/Online/Mail` (I tried to find context names that enable me to do a 1-to-1 mapping from the first letter of the context to its key on the phone).
+You can also write `266Joe` which would get expanded to `Computer/Online/Mail/Joe`. Notice that I did not put a space between the numbers and the word following it. This tells MobileGTD to interpret `Joe` as part of the context. This is quite handy for the mail and agenda contexts.
+
+
+
