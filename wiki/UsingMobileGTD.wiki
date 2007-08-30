@@ -1,13 +1,25 @@
 #summary How to use MobileGTD
+= The whole picture =
+MobileGTD supports you in processing and reviewing your projects, for browsing your actions you use any file explorer you like.
+== How it works ==
+MobileGTD operates on a certain file and directory structure. After installing MobileGTDData you have the basic structure setup under `C:\Data\GTD`. For each project MobileGTD puts a simple text file into the subdirectory `@Projects`. Each line in a project file can be either an action or an info. When adding an action to a project, a new line is added to the project file and a file is created in a subdirectory named after the actions context. If you e.g. create an action `Computer Download new version of MobileGTD` MobileGTD will create a file `Download new version of MobileGTD.act` in a directory called `Computer/`. You can also use nested contexts, e.g. `Computer/Online/` to further structur your contexts. To avoid too much typing you can define abbreviations for contexts, you could e.g. define `26` to be expanded to `Computer/Online/`.
+
+You can then use any file explorer to browse through your actions and delete done ones. When having MobileGTD process your projects it automatically searches for deleted actions and sets them to done in the project file. 
+
+= Things concerning the entire application =
+All operations for which I wrote key shortcuts can be performed from the menu as well. There you also have the key shortcuts in square brackets so you don't have to remember them. You can also change them to your liking by editing projects.cfg and actions.cfg (see [PostInstallation]).
 = Projects View =
 == Navigating ==
 You can navigate your project list by using your cursor buttons. Alternatively you can search for projects by pressing `0` and entering one of the contained words.
 == Creating a new project ==
 To create a new project choose the `New Project` entry in the project list. You can always get there quickly by pressing `0` and then your select key (usually in the center of your cursor buttons). Press the select key again to create the project. MobileGTD will ask for a project name (can be changed starting with 0.8.5) and insert the new project at the start of the list.
+== Filtering ==
+By default MobileGTD shows you only active projects and projects scheduled for review. To toggle that filter and show show inactive projects as well simply press `1`. 
 == Creating a single action ==
 To create a single action choose the `No Project` entry. You should use this with caution, almost all actions belong to a project that you might not have discovered yet (even writing a mail usually involves waiting for a response).
 MobileGTD will ask for the project string, which is described a little down this page.
-
+== Processing projects ==
+You can use `5` to process a single project and `6` to process all projects. When processing projects MobileGTD searches for deleted action files and marks their corresponding entries in the project file as `done`. All projects for which no active actions exist will be marked as `Review`. In the project list view these projects have a `!` in front of their name.
 = Project Details View =
 Careful: Projects are saved only when you exit the project details view. Be sure not to exit the application incidentally by pressing the Hang-Up button before exiting the project details view.
 == Adding an info ==
