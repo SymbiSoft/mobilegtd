@@ -19,3 +19,7 @@ After having installed Python for Series 60, just download the MobileGTD and the
 *That's it*
 
 Start MobileGTD from your menu and give it a first shot!
+= Optimization =
+I found it quite important to have MobileGTD and the file explorer quickly accessible (your inbox must always be at hand). So I configured the left and right softkeys to start MobileGTD and the file explorer.
+
+For more tips see [BestPractices].
