@@ -1,0 +1,17 @@
+#summary This is how you install MobileGTd
+#labels Featured
+
+= Things you need =
+  * Python for Series 60 1.4.0 (for a list of phones and their Symbian version numbers see [http://www.nokiaport.de/index.php?pid=symbiannokia&mid= NokiaPort]
+    * [http://downloads.sourceforge.net/pys60/PythonForS60_1_4_0_2ndEd.sis?modtime=1183735938&big_mirror=0 2nd edition]
+    * [http://downloads.sourceforge.net/pys60/PythonForS60_1_4_0_2ndEdFP2.sis?modtime=1183735938&big_mirror=0 2nd edition FP2]
+    * [http://downloads.sourceforge.net/pys60/PythonForS60_1_4_0_2ndEdFP3.SIS?modtime=1183735938&big_mirror=0 2nd edition FP3]
+    * [http://downloads.sourceforge.net/pys60/PythonForS60_1_4_0_3rdEd.sis?modtime=1183735938&big_mirror=0 3rd edition]
+  * A good file explorer
+
+= Details =
+
+Add your content here.  Format your content with:
+  * Text in *bold* or _italic_
+  * Headings, paragraphs, and lists
+  * Automatic links to other wiki pages
