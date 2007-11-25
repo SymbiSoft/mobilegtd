@@ -1,5 +1,5 @@
 #summary Post installation instructions.
-#labels Featured
+#labels Featured,Phase-Deploy
 
 = Setting up the configuration =
 == Configuring the path of your GTD data ==
