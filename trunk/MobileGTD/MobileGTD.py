@@ -3,6 +3,11 @@ from inbox import EInbox,Inbox
 from e32 import Ao_lock
 from key_codes import *
 import key_codes
+from time import *
+
+
+def u_join(father,son):
+    return u'%s/%s'%(father,son)
 console_encoding = "latin1"
 file_name_encoding = "utf-8"
 console_log_level = 2
@@ -110,7 +115,7 @@ def read_configuration(file_name,ordered=False):
         configuration=odict()
     else:
         configuration ={}
-    if not os.path.isfile(file_name):
+    if not os.path.isfile(file_name.encode('utf-8')):
         log(u'Configuration file %s does not exist'%file_name)
         return configuration
     for line in parse_file_to_line_list(file_name):
@@ -131,7 +136,18 @@ def read_configuration(file_name,ordered=False):
 main_config_file = 'C:/System/Data/mobile_gtd.cfg'
 
 COMMON_CONFIG = read_configuration(main_config_file)
-gtd_directory = COMMON_CONFIG['path'].encode('utf-8')
+def read_config(key):
+    if not COMMON_CONFIG.has_key(key):
+        error_text = u'%s does not contain a configuration key for %s'%(main_config_file,key)
+        appuifw.note(error_text)
+        appuifw.note(u'Maybe you need to install the newest version of the data package')
+        log(error_text)
+    else:
+        return COMMON_CONFIG[key]
+
+gtd_directory = read_config('path')
+log_file=file(gtd_directory+'gtd.log','w')
+inactivity_threshold = int(read_config('inactivity_threshold'))
 project_directory = gtd_directory+'@Projects/'
 review_directory = project_directory+'@Review/'
 done_directory = project_directory+'@Done/'
@@ -139,9 +155,7 @@ someday_directory = project_directory+'@Someday/'
 tickled_directory = project_directory+'@Tickled/'
 project_dir_name = '@Projects/'
 
-log_file=file(gtd_directory+'gtd.log','w')
 log_entries=[]
-
 
 
 
@@ -163,16 +177,39 @@ def safe_chdir(path_unicode):
 
 
 
+
 class ItemWithStatus(object):
-    def __init__(self,status=unprocessed):
+    def __init__(self,status):
         self.status = status
     def status_string(self):
         if self.status == unprocessed:
             return u''
         else:
             return u'%s '%status_sign_map[self.status]
-    
-class Action(ItemWithStatus):
+
+class WriteableItem(ItemWithStatus):
+    def __init__(self,status=unprocessed):
+        super(WriteableItem, self).__init__(status)
+    def write(self):
+        safe_chdir(self.path())
+        f = file(self.file_name().encode('utf-8'),'w')
+        content = self.file_string().encode('utf-8')
+        #log( (u'Writing %s to %s'%(content,file_name)).encode('utf-8'),2)
+        f.write(content)
+        f.close()
+    def move_to(self,directory):
+        self.write()
+        new_file_name = u_join(directory,self.file_name())
+        old_file_name = u_join(self.path(),self.file_name())
+        log(u'Moving')
+        log(repr(old_file_name.encode('utf-8')))
+        log(repr(new_file_name.encode('utf-8')))
+        os.renames(old_file_name.encode('utf-8'),new_file_name.encode('utf-8'))
+        log(u'Done moving')
+        return new_file_name
+
+
+class Action(WriteableItem):
 
     def __init__(self,description,context,project,info='',status=unprocessed):
         super(Action, self).__init__(status)
@@ -182,22 +219,24 @@ class Action(ItemWithStatus):
         self.info = info
 
     def update(self,path=gtd_directory):
-        context_path = (u'%s/%s'%(path,self.context)).encode('utf-8')
+        context_path = u_join(path,self.context)
         if (self.status == unprocessed):
             log('Processing %s'%self.description,3)
             self.process()
             return True
         elif(self.status == processed):
-            file_name = self.proposed_file_name()
-            path_and_file=os.path.join(context_path,file_name)
+            file_name = self.file_name()
+            path_and_file=u_join(context_path,file_name)
             log(repr(path_and_file),4)
 
-            if not os.path.isfile(path_and_file):
+            if not os.path.isfile(path_and_file.encode('utf-8')):
                 self.status = done
                 return True
         return False
-    def path(self,path=gtd_directory):
-        return (u'%s/%s'%(path,self.context)).encode('utf-8')
+    def path(self,context=None):
+        if not context:
+            context=self.context
+        return u_join(gtd_directory,context)
 
     def unprocess(self):
         self.status = unprocessed
@@ -211,21 +250,23 @@ class Action(ItemWithStatus):
     def process(self):
         self.status = processed
         self.write()
-    def write(self):
-        safe_chdir(self.path())
-        file_name = self.proposed_file_name()
-        f = file(file_name,'w')
-        f.write(self.action_file_string().encode('utf-8'))
-        f.close()
     def path_and_file(self):
-        return '%s/%s'%(self.path(),self.proposed_file_name())
+        return u_join(self.path(),self.file_name())
     def remove(self):
-        if os.path.isfile(self.path_and_file()):
-            os.remove(self.path_and_file())
+        encoded_path = self.path_and_file().encode('utf-8')
+        if os.path.isfile(encoded_path):
+            os.remove(encoded_path)
+    def set_context(self,context):
+        self.status = processed
+        self.move_to(gtd_directory+'/'+context)
+        self.context = context
+        self.write()
     def is_active(self):
         return self.status in [processed,unprocessed]
-    def proposed_file_name(self):
-        return (u'%s.act'%self.description).encode('utf-8')
+    def is_not_done(self):
+        return self.status in [processed,unprocessed,inactive]
+    def file_name(self):
+        return u'%s.act'%self.description
     def set_description(self,description):
         self.remove()
         self.description = description
@@ -240,13 +281,13 @@ class Action(ItemWithStatus):
             advanced_info = '   ('+advanced_info+' )'
         return repr(self.description)+' @'+repr(self.context)+repr(advanced_info)
 
-    def action_file_string(self):
+    def file_string(self):
         string = self.project_file_string()
         if len(self.project)>0:
             string = string+u'\nProject: %s'%self.project
         return string
     def project_file_string(self,entry_separator=' '):
-        return u'%s%s'%(self.status_string(),self.context_description_info())
+        return '%s %s'%(self.status_string(),self.context_description_info())
     def context_description_info(self,entry_separator=' '):
         return u'%s%s%s%s%s'%(\
             self.context,entry_separator,\
@@ -259,37 +300,39 @@ class Action(ItemWithStatus):
             info_string = u'%s(%s)'%(entry_separator,self.info)
         return info_string
 
-class Project(ItemWithStatus):
+class Project(WriteableItem):
     def __init__(self,file_name):
-        self.file_name=file_name
+        self.complete_file_path=file_name
         self.actions=None
         self.infos=None
         self.dirty = False
         super(Project, self).__init__(self.get_status())
         log(u'Project %s is %s'%(self.name(),self.status))
+        self.read()
 
     def read(self):
-        if not os.path.isfile(self.file_name.encode('utf-8')):
+        if not os.path.isfile(self.complete_file_path.encode('utf-8')):
             self.actions=[]
             self.infos=[]
         else:
-            action_strings = parse_file_to_line_list(self.file_name)
+            action_strings = parse_file_to_line_list(self.complete_file_path)
             (self.actions,self.infos) = parse_lines(action_strings)
             for action in self.actions:
                 action.project = self.name()
 
-    def write(self):
+    def file_string(self):
         lines = []
         for info in self.get_infos():
-            lines.append((u'# %s\n'%info).encode('utf-8'))
+            lines.append(u'# %s'%info)
         self.sort_actions()
         for action in self.get_actions():
-            lines.append((u'%s\n'%action.project_file_string()).encode('utf-8'))
-        log( u'Writing %s to %s'%(lines,self.file_name),2)
-        f = file(self.file_name.encode('utf-8'),'w')
-        f.writelines(lines)
-        f.close()
-        self.dirty = False
+            lines.append(action.project_file_string())
+        return u'\n'.join(lines) 
+
+    def write(self):
+        if self.dirty:
+            WriteableItem.write(self)
+            self.dirty = False
     def sort_actions(self):
         self.get_actions().sort(compare_by_status)
 
@@ -309,18 +352,23 @@ class Project(ItemWithStatus):
     def name_with_status(self):
         return self.status_string()+self.name()
     def name(self):
-        matching = file_name_regexp.match(self.file_name)
+        matching = file_name_regexp.match(self.complete_file_path)
         file_name=matching.group('file_name')
         return file_name
     def active_actions(self):
         return filter(lambda action: action.is_active() ,self.actions)
+    def not_done_actions(self):
+        return filter(lambda action: action.is_not_done() ,self.actions)
     def inactive_actions(self):
         return filter(lambda action: not action.is_active() ,self.actions)
     def add_action(self,action):
         self.get_actions().append(action)
         self.dirty = True
-    def add_info(self,info):
-        self.get_infos().append(info)
+    def add_info(self,info,position=None):
+        if not position:
+            self.get_infos().append(info)
+        else:
+            self.get_infos().insert(position,info)
         self.dirty = True
     def remove_action(self,action):
         self.get_actions().remove(action)
@@ -332,14 +380,11 @@ class Project(ItemWithStatus):
     def has_active_actions(self):
         return len(self.active_actions())>0
     def path(self):
-        return os.path.dirname(self.file_name)
-    def file_name_without_path(self):
-        return os.path.basename(self.file_name)
+        return os.path.dirname(self.complete_file_path.encode('utf-8')).decode('utf-8')
+    def file_name(self):
+        return os.path.basename(self.complete_file_path.encode('utf-8')).decode('utf-8')
     def move_to(self,directory):
-        self.write()
-        new_file_name = directory+self.file_name_without_path()
-        os.renames(self.file_name.encode('utf-8'),(new_file_name).encode('utf-8'))
-        self.file_name = new_file_name
+        self.complete_file_path = WriteableItem.move_to(self,directory)
     def review(self):
         self.status = inactive
         self.move_to(review_directory)
@@ -371,28 +416,40 @@ class Project(ItemWithStatus):
             return ['']+split_path[project_index+1:]
         else:
             return split_path[project_index+1:]
+    def date_of_last_activity(self):
+        file_name = self.complete_file_path.encode('utf-8')
+        log(repr('Counting inactivity for %s.'%file_name),0)
+        return os.path.getmtime(file_name)
+    def days_since_last_activity(self):
+        days = (time()-self.date_of_last_activity())/86400
+        log(u'No activity since %s days in %s'%(days,self.name()),0)
+        return days
     def scheduled_for_review(self):
         return self.path().endswith('@Review')
     def set_name(self,name):
         self.write()
-        new_file_name = u'%s/%s.prj'%(self.path(),name)
+        new_file_name = u'%s.prj'%u_join(self.path(),name)
         
         log(u'Renaming to %s'%new_file_name)
-        os.renames(self.file_name.encode('utf-8'),(new_file_name).encode('utf-8'))
-        self.file_name = new_file_name
+        os.renames(self.complete_file_path.encode('utf-8'),new_file_name.encode('utf-8'))
+        self.complete_file_path = new_file_name
     def process(self):
-            project_changed = False
-            for action in self.get_actions():
-                changed = action.update()
-                if (changed):
-                        self.dirty = True
-                        log(u'%s %s'%(status_string_map[action.status],action.description),2)
-            if self.dirty:
-                log(self.name(),1)
-                self.write()
-            if not self.has_active_actions():
-                log('Inactive: %s'%self.name(),0)
-                self.review()
+        project_changed = False
+        for action in self.get_actions():
+            if (action.update()):
+                    self.dirty = True
+                    log(u'%s %s'%(status_string_map[action.status],action.description),2)
+        self.write()
+        if not self.has_active_actions():
+            log(u'Inactive: %s'%self.name(),0)
+            self.review()
+            log(u'Review because of stalling: %s'%self.name(),0)
+        days_since_last_activity = self.days_since_last_activity() 
+        log(u'No change in %s since %s days.'%(self.name(),days_since_last_activity),0)
+        
+        if days_since_last_activity > inactivity_threshold:
+            self.review()
+            log(u'Review because of inactivity: %s'%self.name(),0)
 
 class Projects:
     def __init__(self):
@@ -406,18 +463,17 @@ class Projects:
         self.tickled_projects = None
         self.processed_projects = None
     def read(self,root,recursive=False):
-        if not os.path.exists(root):
+        if not os.path.exists(root.encode('utf-8')):
             return []
         all_projects = []
-        for name in os.listdir(root):
+        for name in os.listdir(root.encode('utf-8')):
             log(repr(name))
-            file_name = os.path.join(root,name)
-            log(u'Reading %s'%file_name.decode('utf-8'))
-            if recursive and os.path.isdir(file_name):
+            file_name = u_join(root,name.decode('utf-8'))
+            log(u'Reading %s'%file_name)
+            if recursive and os.path.isdir(file_name.encode('utf-8')):
                 all_projects.extend(self.read(file_name, True))
             if name.endswith('.prj'):
-                project_file_name = unicode(file_name,file_name_encoding)
-                all_projects.append(Project(project_file_name))
+                all_projects.append(Project(file_name))
         return all_projects
     def get_all_projects(self):
         return self.get_processed_projects() + self.get_review_projects() + \
@@ -447,8 +503,8 @@ class Projects:
         
     def process(self):
         log(u'Updating Projects:')
-        inactive_projects=[]
         for project in self.get_active_projects():
+            log(project.name(),2)
             project.process()
         return True
 
@@ -471,17 +527,17 @@ class SearchableListView(object):
         self.binding_map = binding_map
         self.current_entry_filter_index = 0
         self.entry_filters = entry_filters
-        self.entry_filter = self.entry_filters[0]
-        self.entries = self.generate_entries()
-        self.view = appuifw.Listbox(self.all_items(),self.change_entry)
+        self.filtered_list = self.entry_filters[0]
+        self.widgets = self.generate_widgets()
+        self.view = appuifw.Listbox(self.all_widget_texts(),self.change_entry)
 
     def run(self):
         self.old_index = None
         self.adjustment = None
-        appuifw.app.screen=COMMON_CONFIG['screen'].encode('utf-8')
+        appuifw.app.screen=read_config('screen').encode('utf-8')
         save_gui(self)
         appuifw.title=self.title
-        self.update()
+        self.reread_widgets()
         self.set_bindings_for_selection(0)
         appuifw.app.body=self.view
 
@@ -491,13 +547,14 @@ class SearchableListView(object):
         self.lock.signal()
         restore_gui(self)
 
-    def update(self):
-        self.entries = self.generate_entries()
-        self.items = self.all_items()
+    def reread_widgets(self):
+        self.widgets = self.generate_widgets()
+        self.update_existing_widgets()
+    def update_existing_widgets(self):
         index = self.selected_index()
-        if index > len(self.items):
-            index = len(self.items)
-        self.view.set_list(self.items,index)
+        if index > len(self.widgets):
+            index = len(self.widgets)
+        self.view.set_list(self.all_widget_texts(),index)
 
     def remove_all_key_bindings(self):
         for key in all_key_values():
@@ -527,7 +584,7 @@ class SearchableListView(object):
             index = self.selected_index() + adjustment
         else:
             index = self.selected_index()
-        if index < 0 or index >= len(self.items):
+        if index < 0 or index >= len(self.widgets):
             return
 
         if self.should_bindings_change(self.old_index,self.selected_index()):
@@ -540,19 +597,19 @@ class SearchableListView(object):
         appuifw.app.menu=self.old_menu
         appuifw.app.exit_key_handler = self.old_exit_key_handler
     def search_item(self):
-        selected_item = appuifw.selection_list(self.all_items(),search_field=1)
+        selected_item = appuifw.selection_list(self.all_widget_texts(),search_field=1)
         if selected_item == None:
             selected_item = self.selected_index()
-        self.view.set_list(self.all_items(),selected_item)
+        self.view.set_list(self.all_widget_texts(),selected_item)
         self.set_bindings_for_selection(selected_item)
-    def current_entry(self):
-        return self.entries[self.selected_index()]
+    def current_widget(self):
+        return self.widgets[self.selected_index()]
     def switch_entry_filter(self):
         self.current_entry_filter_index += 1
-        self.entry_filter = self.entry_filters[self.current_entry_filter_index % len(self.entry_filters)]
-        self.update()
-    def all_items(self):
-        return [entry.list_repr() for entry in self.entries]
+        self.filtered_list = self.entry_filters[self.current_entry_filter_index % len(self.entry_filters)]
+        self.reread_widgets()
+    def all_widget_texts(self):
+        return [entry.list_repr() for entry in self.widgets]
 
 
 class EditableListView(SearchableListView):
@@ -560,20 +617,20 @@ class EditableListView(SearchableListView):
         super(EditableListView, self).__init__(title,entry_filters,binding_map)
     
     def function_exists(self,function_name):    
-        return function_name in dir(self.current_entry())
+        return function_name in dir(self.current_widget())
     
     def exec_if_function_exists(self,function_name):
         if self.function_exists(function_name):
             self.exec_and_update(function_name)
             
     def exec_and_update(self,function_name):
-        entry = self.current_entry()
+        entry = self.current_widget()
         exec('entry.%s()'%function_name)
-        self.update()
+        self.update_existing_widgets()
 
     def key_and_menu_bindings(self,selected_index):
         key_and_menu_bindings=[]
-        for function in applicable_functions(self.entries[selected_index],self.binding_map)+\
+        for function in applicable_functions(self.widgets[selected_index],self.binding_map)+\
             applicable_functions(self,self.binding_map):
             execute_and_update_function = self.execute_and_update(function)
             (key,description) = self.binding_map[function.__name__]
@@ -590,7 +647,7 @@ class EditableListView(SearchableListView):
             self.exec_and_update('remove')
             #self.entries.remove(self.selected_index())
     def execute_and_update(self,function):
-        return lambda: (function(),self.update(),self.index_changed())
+        return lambda: (function(),log(u'Called %s'%function),self.update_existing_widgets(),self.index_changed())
     def change_status(self):
         self.exec_if_function_exists('change_status')
 
@@ -598,28 +655,30 @@ class ProjectListView(EditableListView):
     def __init__(self,projects):
         self.projects = projects
         super(ProjectListView, self).__init__(u'Projects', [projects.get_active_projects,projects.get_all_projects,projects.get_inactive_projects],PROJECT_LIST_KEYS_AND_MENU)
-
-    def generate_entries(self):
-        entries = []
-        entries.append(NewProjectEntry(self.projects))
-        entries.append(NoProjectEntry())
-        entries.extend([ProjectEntry(project) for project in self.entry_filter()])
+    def add_project(self,project):
+        self.projects.add_project(project)
+        self.reread_widgets()
+    def generate_widgets(self):
+        widgets = []
+        widgets.append(NewProjectWidget(self))
+        widgets.append(NoProjectWidget())
+        widgets.extend([ProjectWidget(project) for project in self.filtered_list()])
         try:
-            entries.extend([SMSEntry(sms_id,self.projects) for sms_id in Inbox(EInbox).sms_messages()])
+            widgets.extend([SMSWidget(sms_id,self.projects) for sms_id in Inbox(EInbox).sms_messages()])
         except Exception,e:
             log(u'No permission to access SMS inbox')
             log(unicode(repr(e.args)))
-        return entries
+        return widgets
 
     def process_all(self):
         appuifw.note(u'Processing all Projects')
         self.projects.process()
-        self.update()
+        self.update_existing_widgets()
     def reread_projects(self):
         self.projects.reread()
-        self.update()
+        self.reread_widgets()
 
-class SMSEntry:
+class SMSWidget:
     def __init__(self,sms_id,projects):
         self.sms_id = sms_id
         self.projects = projects
@@ -654,7 +713,7 @@ class SMSEntry:
         self.lock.signal()
         restore_gui(self)
 
-class NoProjectEntry:
+class NoProjectWidget:
     def change(self):
         action = ask_for_action("No project")
         if action:
@@ -663,7 +722,7 @@ class NoProjectEntry:
     def list_repr(self):
         return u'No project (R U Sure?)'
 
-class NewProjectEntry:
+class NewProjectWidget:
     def __init__(self,projects):
         self.projects = projects
     def change(self):
@@ -674,7 +733,7 @@ class NewProjectEntry:
     def list_repr(self):
         return u'New project'
 
-class ProjectEntry:
+class ProjectWidget:
     def __init__(self,project):
         self.project = project
     def change(self):
@@ -723,27 +782,27 @@ class ProjectEntry:
 class ActionListView(EditableListView):
     def __init__(self,project):
         self.project = project
-        super(ActionListView, self).__init__(u'Actions and Info', [self.project.active_actions,self.project.get_actions,self.project.inactive_actions], ACTION_LIST_KEYS_AND_MENU)
+        super(ActionListView, self).__init__(u'Actions and Info', [self.project.not_done_actions,self.project.get_actions,self.project.inactive_actions], ACTION_LIST_KEYS_AND_MENU)
 
     def exit(self):
         EditableListView.exit(self)
         self.project.write()
 
     def actions(self):
-        return self.entry_filter()
+        return self.filtered_list()
     def infos(self):
         return self.project.get_infos()
-    def generate_entries(self):
-        entries = []
-        entries.append(InfosEntry(self.project))
+    def generate_widgets(self):
+        widgets = []
+        widgets.append(InfosWidget(self.project))
         infos = self.infos()
         for info in infos:
-            entries.append(InfoEntry(info,self.project))
+            widgets.append(InfoWidget(info,self.project))
         for (context,actions) in self.actions_by_context().items():
-            entries.append(ContextEntry(context,self.project))
+            widgets.append(ContextWidget(context,self.project))
             for action in actions:
-                entries.append(ActionEntry(action,self.project))
-        return entries
+                widgets.append(ActionWidget(action,self.project))
+        return widgets
     def actions_by_context(self):
         context_actions_map = {}
         for action in self.actions():
@@ -762,11 +821,16 @@ class ActionListView(EditableListView):
     def add_info(self):
         info = ask_for_info(self.project.name())
         if info:
-            self.project.add_info(info)
+            selected = self.selected_index()
+            if selected>0 and selected < len(self.project.get_infos()):
+                position = selected
+            else:
+                position = None
+            self.project.add_info(info,position)
 
 
 
-class ActionEntry:
+class ActionWidget:
     def __init__(self,action,project):
         self.action = action
         self.project = project
@@ -780,7 +844,8 @@ class ActionEntry:
     def change_context(self):
         new_context = appuifw.query(u'Enter context','text',self.action.context)
         if new_context:
-            self.action.context = parse_context(new_context)
+            self.action.set_context(parse_context(new_context))
+        self.project.dirty=True
     def remove(self):
         self.action.remove()
         self.project.remove_action(self.action)
@@ -797,7 +862,7 @@ class ActionEntry:
     def list_repr(self):
         return u'  %s %s'%(self.action.status_string(),self.action.description)
 
-class InfoEntry:
+class InfoWidget:
     def __init__(self,info,project):
         self.info = info
         self.project = project
@@ -817,7 +882,7 @@ class InfoEntry:
     def list_repr(self):
         return u'  %s'%self.info
 
-class ContextEntry:
+class ContextWidget:
     def __init__(self,context,project):
         self.context = context
         self.project = project
@@ -829,7 +894,7 @@ class ContextEntry:
     def list_repr(self):
         return u'@%s'%self.context
 
-class InfosEntry:
+class InfosWidget:
     def __init__(self,project):
         self.project = project
     def list_repr(self):
@@ -846,33 +911,34 @@ def new_project(proposed_name=u'',info=None):
     log(u'New project %s'%project_name)
     project_file_name = (project_directory+project_name+'.prj') #.encode( "utf-8" )
     project = Project(project_file_name)
+    project.dirty=True
     return project
 
-def new_action(projects):
-    names = [project.name() for project in projects]
-    names.insert(0, u'New Project')
-    selected_project = appuifw.selection_list(names,search_field=1)
-    if (selected_project == None):
-        return False
-    if (selected_project == 0):
-        pass
-    else:
-        project = projects[selected_project-1]
-        log(u'Project %s'%project.name())
-    if(not project in projects):
-        projects.insert(0,project)
-    (action,info)=ask_for_action_or_info(project.name())
-    if action==None and info==None:
-        pass
-    elif info==None:
-        add_action_to_project(action,project)
-    else:
-        project.get_infos().append(info)
-        log(u'Added info %s'%info,1)
-
-    project.write()
-    log('Project written',2)
-    return True
+#def new_action(projects):
+#    names = [project.name() for project in projects]
+#    names.insert(0, u'New Project')
+#    selected_project = appuifw.selection_list(names,search_field=1)
+#    if (selected_project == None):
+#        return False
+#    if (selected_project == 0):
+#        pass
+#    else:
+#        project = projects[selected_project-1]
+#        log(u'Project %s'%project.name())
+#    if(not project in projects):
+#        projects.insert(0,project)
+#    (action,info)=ask_for_action_or_info(project.name())
+#    if action==None and info==None:
+#        pass
+#    elif info==None:
+#        add_action_to_project(action,project)
+#    else:
+#        project.get_infos().append(info)
+#        log(u'Added info %s'%info,1)
+#    project.dirty=True
+#    project.write()
+#    log('Project written',2)
+#    return True
 
 def add_action_to_project(action,project):
     action.process()
@@ -903,7 +969,7 @@ def parse_lines(lines):
     infos = []
     for line in lines:
         if len(line) < 3:
-            break
+            continue
         elif line[0]=='#':
             infos.append(line[1:].strip())
         else:
@@ -928,7 +994,7 @@ def parse_context(context):
     context_numbers = context_matching.group('numbers')
     context_text = context_matching.group('text')
     if(context_numbers in ABBREVIATIONS):
-        context=(ABBREVIATIONS[context_numbers]+context_text).rstrip(u'/')
+        context=(unicode(ABBREVIATIONS[context_numbers])+context_text).rstrip(u'/')
     else:
         context=context_text
     if (len(context)<2):
