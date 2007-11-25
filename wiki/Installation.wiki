@@ -1,5 +1,5 @@
 #summary This is how you install MobileGTD
-#labels Featured
+#labels Featured,Phase-Deploy
 
 = Things you need in advance =
   * [http://sourceforge.net/projects/pys60 Python for Series 60] 1.4.1 (for a list of phones and their Symbian version numbers see [http://www.nokiaport.de/index.php?pid=symbiannokia&mid= NokiaPort])
