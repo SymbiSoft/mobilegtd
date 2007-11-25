@@ -1,4 +1,5 @@
 #summary What's new in
+#labels Featured
 
 = 0.9.0 =
   * Added function to schedule projects for review that have had no activity for a certain time
