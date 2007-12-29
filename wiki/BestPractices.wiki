@@ -1,6 +1,7 @@
 #summary On this page you will find Best Practices for MobileGTD
 #labels Featured
-
+= Quick Access = 
+I found it quite important to have MobileGTD and the file explorer quickly accessible (your inbox must always be at hand). So I configured the left and right softkeys to start MobileGTD and the file explorer.
 = Configuration =
 
   * Add a @Today folder in the GTD folder
