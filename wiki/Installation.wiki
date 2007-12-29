@@ -13,7 +13,7 @@
     * [http://www.lonelycatgames.com/?app=xplore X-plore]
     * [http://code.google.com/p/skyexplorer/ Sky Explorer]
 = MobileGTD installation =
-After having installed Python for Series 60, just download the MobileGTD and the MobileGTDData package for your mobile phone and install them to your internal memory (Drive C:) either using Nokia PC Suite or directly downloading them with your mobile phone.
+After having installed Python for Series 60, just download the MobileGTD (and the MobileGTDData if you prefer to use a stable version prior to 0.9.5) package for your mobile phone and install them to your internal memory (Drive C:) either using Nokia PC Suite or directly downloading them with your mobile phone.
 
 
 *That's it*
