@@ -1,7 +1,4 @@
 This package contains the directory structure necessary to start with MobileGTD.
 If you have a previous installation of this package and modified the configuration make backups as they will be overwritten.
 
-There are four configuration files:
-In C:\system\data\mobile_gtd.cfg you can define the location for the MobileGTD data directory (C:\Data\GTD by default). If you change this path in the configuration you also have to move the files from C:\Data\GTD to the path you want. You can also define screen layout. Possible values are 'normal', 'large' and 'full'. It might look awkward though. With the key inactivity_threshold you can define after which time a stalled project should be scheduled for review.
-In C:\Data\GTD\abbreviations.cfg you can define abbreviations for contexts. When entering actions you can use those abbreviations. Remember to put a slash at the end of each context path.
-In C:\Data\GTD\actions.cfg and C:\Data\GTD\projects.cfg you can define the menu entries and the key shortcuts for functions. Don't change the function names (everything before the colon)!
+For an explanation of the configuration files see the project wiki at http://code.google.com/p/mobilegtd
