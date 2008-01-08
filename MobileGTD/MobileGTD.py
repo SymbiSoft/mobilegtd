@@ -3,6 +3,7 @@ from inbox import EInbox,Inbox
 from e32 import Ao_lock
 from key_codes import *
 import key_codes
+#import appswitch
 from time import *
 
 main_config_file = 'C:/System/Data/mobile_gtd.cfg'
