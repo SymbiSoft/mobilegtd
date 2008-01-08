@@ -9,7 +9,7 @@ main_config_file = 'C:/System/Data/mobile_gtd.cfg'
 
 default_configuration = {"screen":"normal",
 "path":"C:/Data/GTD/",
-"inactivity_threshold":"9"
+"inactivity_threshold":"7"
 }
 
 default_actions_menu = {
@@ -26,23 +26,24 @@ default_actions_menu = {
 
 default_projects_menu = {
 "switch_entry_filter":"1,Toggle Active/All/Inactive Projects",
-"unreview":"2,Schedule as active",
+"activate":"2,Schedule as active",
 "defer":"3,Defer Project",
-"add_info":"4,Add Info",
+"reread_projects":"4,Reread Projects",
 "process":"5,Process Project",
 "process_all":"6,Process all Projects",
 "review":"7,Review Project",
 "tickle":"8,Tickle project",
 "rename":"9,Rename project",
 "search_item":"0,Search Item",
-"remove_entry":"Backspace,Set project to done"
+"remove":"Backspace,Set project to done"
 }
 
 
 default_abbreviations = {
 "1":"Agenda/",
-"2":"Computer/ ",
-"26":"Computer/Online/ ",
+"2":"Computer/",
+"26":"Computer/Online/",
+"26":"Computer/Online/Mail ",
 "3":"Errands/",
 "4":"Anywhere/",
 "42":"Anywhere/Brainstorm/",
@@ -50,26 +51,15 @@ default_abbreviations = {
 "46":"Anywhere/MobilePhone/",
 "9":"WaitingFor/"
 }
-#default_tickle_times= [
-#u"Next week",
-#u"Next month",
-#u"1 January",
-#u"2 February",
-#u"3 March",
-#u"4 April",
-#u"5 May",
-#u"6 June",
-#u"7 July"
-#]
-#tickle_times=default_tickle_times
+
 def u_join(father,son):
     return u'%s/%s'%(father,son)
-console_encoding = "latin1"
-file_name_encoding = "utf-8"
+
+
 console_log_level = 2
 file_log_level = 5
 
-codec = 'utf-8'
+
 unprocessed = 0
 processed = 1
 done = 2
@@ -181,8 +171,6 @@ def parse_file_to_line_list(unicode_complete_path):
     lines = text.splitlines()
     return lines
 
-
-#from UserDict import UserDict
 
 class odict(dict):
     def __init__(self):
@@ -526,7 +514,7 @@ class Project(WriteableItem):
     def set_done(self):
         self.status = done
         self.move_to(done_directory)
-    def unreview(self):
+    def activate(self):
         self.status = processed
         self.move_to(project_directory)
     def inactivate(self):
@@ -592,12 +580,20 @@ class Project(WriteableItem):
             logger.log(u'Inactive: %s'%self.name(),0)
             self.review()
             logger.log(u'Review because of stalling: %s'%self.name(),0)
-        
+      
 
 class Projects:
     def __init__(self):
         self.root = project_directory
         self.reread()
+        self.status_to_list_map = { 
+            processed :  self.processed_projects,
+            unprocessed: self.review_projects,
+            inactive :   self.review_projects,
+            tickled:     self.tickled_projects,
+            someday:     self.someday_projects,
+            done: []
+        }
 
         
     def reread(self):
@@ -607,18 +603,7 @@ class Projects:
         self.tickled_projects = None
     def read(self,root,recursive=False):
         # TODO Use generic read function
-        if not os.path.exists(root.encode('utf-8')):
-            return []
-        all_projects = []
-        for name in os.listdir(root.encode('utf-8')):
-            logger.log(repr(name))
-            file_name = u_join(root,name.decode('utf-8'))
-            logger.log(u'Reading %s'%file_name)
-            if recursive and os.path.isdir(file_name.encode('utf-8')):
-                all_projects.extend(self.read(file_name, True))
-            if name.endswith('.prj'):
-                all_projects.append(Project(file_name))
-        return all_projects
+        return [Project(project_name) for project_name in list_dir(root, recursive, lambda name: name.endswith('.prj'))]
     def get_all_projects(self):
         return self.get_processed_projects() + self.get_review_projects() + \
             self.get_tickled_projects() + self.get_someday_projects()
@@ -642,6 +627,10 @@ class Projects:
         if self.someday_projects == None:
             self.someday_projects = self.read(someday_directory,True)
         return self.someday_projects
+    def sort_projects(self):
+        projects = self.get_all_projects()
+        for project in projects:
+           self.status_to_list_map[project.get_status()].append(project)
     def add_project(self,project):
         self.processed_projects.insert(0,project)
         
@@ -657,14 +646,14 @@ def save_gui(object):
     object.old_gui = appuifw.app.body
     object.old_menu = appuifw.app.menu
     object.old_exit_key_handler = appuifw.app.exit_key_handler
-    object.title=appuifw.app.title
+    object.old_title=appuifw.app.title
     object.lock = Ao_lock()
 
 def restore_gui(object):
     appuifw.app.body = object.old_gui
     appuifw.app.menu = object.old_menu
     appuifw.app.exit_key_handler = object.old_exit_key_handler
-    appuifw.app.title = object.title
+    appuifw.app.title = object.old_title
 
 class SearchableListView(object):
     def __init__(self,title,entry_filters,binding_map):
@@ -677,21 +666,20 @@ class SearchableListView(object):
         self.view = appuifw.Listbox(self.all_widget_entries(),self.change_entry)
 
     def run(self):
-        self.old_index = None
         self.adjustment = None
         appuifw.app.screen=COMMON_CONFIG['screen'].encode('utf-8')
         save_gui(self)
-        appuifw.title=self.title
+        appuifw.app.title=self.title
         self.reread_widgets()
         self.set_bindings_for_selection(0)
         appuifw.app.body=self.view
-
         appuifw.app.exit_key_handler=self.exit
         self.lock.wait()
     def exit(self):
         self.lock.signal()
         restore_gui(self)
 
+        
     def reread_widgets(self):
         self.widgets = self.generate_widgets()
         self.update_existing_widgets()
@@ -730,18 +718,13 @@ class SearchableListView(object):
             index = self.selected_index() + adjustment
         else:
             index = self.selected_index()
-        if index < 0 or index >= len(self.widgets):
-            return
+        if index < 0:
+            index = len(self.widgets) - 1
+        if index >= len(self.widgets):
+            index = 0
+        self.set_bindings_for_selection(index)
 
-        if self.should_bindings_change(self.old_index,self.selected_index()):
-            self.set_bindings_for_selection(index)
-        self.old_index = self.selected_index()
 
-    def exit(self):
-        self.lock.signal()
-        appuifw.app.body=self.old_gui
-        appuifw.app.menu=self.old_menu
-        appuifw.app.exit_key_handler = self.old_exit_key_handler
     def search_item(self):
         selected_item = appuifw.selection_list(self.all_widget_texts(),search_field=1)
         if selected_item == None or selected_item == -1:
@@ -782,20 +765,13 @@ class EditableListView(SearchableListView):
             (key,description) = self.binding_map[function.__name__]
             key_and_menu_bindings.append((get_key(key),key,description,execute_and_update_function))
         return key_and_menu_bindings
-    def should_bindings_change(self,old_index,new_index):
-        return True
-        # TODO Return True only if necessary
 
     def change_entry(self):
         self.exec_if_function_exists('change')
-    def remove_entry(self):
-        if self.function_exists('remove'):
-            self.exec_and_update('remove')
-            #self.entries.remove(self.selected_index())
+
     def execute_and_update(self,function):
         return lambda: (function(),logger.log(u'Called %s'%function),self.reread_widgets(),self.index_changed())
-    def change_status(self):
-        self.exec_if_function_exists('change_status')
+
 
 class ProjectListView(EditableListView):
     def __init__(self,projects):
@@ -808,6 +784,7 @@ class ProjectListView(EditableListView):
         return [entry.name_and_details() for entry in self.widgets]
 
     def generate_widgets(self):
+#        self.projects.sort_projects()
         widgets = []
         widgets.append(NewProjectWidget(self))
         widgets.append(NoProjectWidget())
@@ -857,7 +834,7 @@ class SMSWidget:
         appuifw.app.menu=[(u'Create Project', self.create_project),
                         (u'Exit', self.exit_sms_view)]
 
-        appuifw.title=self.list_repr()
+        appuifw.app.title=self.list_repr()
         appuifw.app.body=t
         lock = Ao_lock()
         appuifw.app.exit_key_handler=self.exit_sms_view
@@ -874,7 +851,7 @@ class NoProjectWidget:
     def list_repr(self):
         return u'No project'
     def name_and_details(self):
-        return (self.list_repr(), u'Are you Sure?')
+        return (self.list_repr(), u'Sure? No project attached?')
 
 class NewProjectWidget:
     def __init__(self,projects):
@@ -910,8 +887,8 @@ class ProjectWidget:
             self.project.write()
     def review(self):
         self.project.review()
-    def unreview(self):
-        self.project.unreview()
+    def activate(self):
+        self.project.activate()
     def process(self):
         appuifw.note(u'Processing %s'%self.project.name())
         self.project.process()
@@ -940,7 +917,7 @@ class ProjectWidget:
         elif status == tickled:
             self.project.defer()            
         else:
-            self.project.unreview()
+            self.project.activate()
             
     def tickle(self):
         self.choose_and_execute(tickle_times,self.project.tickle)
@@ -970,7 +947,7 @@ class DisplayableFunction:
 class ActionListView(EditableListView):
     def __init__(self,project):
         self.project = project
-        super(ActionListView, self).__init__(u'Actions and Info', [self.project.not_done_actions,self.project.get_actions,self.project.inactive_actions], ACTION_LIST_KEYS_AND_MENU)
+        super(ActionListView, self).__init__(self.project_name(), [self.project.not_done_actions,self.project.get_actions,self.project.inactive_actions], ACTION_LIST_KEYS_AND_MENU)
 
     def exit(self):
         EditableListView.exit(self)
@@ -1255,7 +1232,7 @@ except Exception, e:
         t.add(formatted_trace_line)
     appuifw.app.menu=[(u'Exit', exit)]
 
-    appuifw.title=u'Error'
+    appuifw.app.title=u'Error'
     appuifw.app.body=t
     lock = Ao_lock()
     appuifw.app.exit_key_handler=exit
