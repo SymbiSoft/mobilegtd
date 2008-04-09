@@ -5,6 +5,14 @@ tickled = 3
 inactive = 4
 someday = 5
 info = 2
+def add_action_to_project(action,project):
+    action.process()
+    logger.log(u'Added action %s'%action.description,1)
+    project.add_action(action)
+    project.write()
+def compare_by_status(x,y):
+    return y.status - x.status
+
 
 class ItemWithStatus(object):
     def __init__(self,status):
