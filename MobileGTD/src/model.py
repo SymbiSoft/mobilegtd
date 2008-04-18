@@ -1,3 +1,9 @@
+import default,mobilegtd.io,os,re,mobilegtd.config
+from time import *
+
+from mobilegtd.logging import logger
+from mobilegtd.config import *
+from mobilegtd.io import *
 unprocessed = 0
 processed = 1
 done = 2
@@ -5,6 +11,64 @@ tickled = 3
 inactive = 4
 someday = 5
 info = 2
+
+action_regexp = re.compile('(?P<status>[+-/!])?\s*(?P<context>\S*)\s*(?P<description>[^\(]*)(\((?P<info>[^\)]*))?',re.U)
+context_regexp = re.compile('(?P<numbers>\d*)(?P<text>\D?.*)',re.U)
+
+
+def make_string_stripper(to_strip):
+    return lambda x: x.replace(to_strip,'')
+
+
+
+def invert_dictionary(dictionary):
+    return dict([[v,k] for k,v in dictionary.items()])
+
+sign_status_map = {u'+':done,u'-':processed,u'!':inactive,u'/':tickled,u'':unprocessed,u'~':someday}
+status_sign_map = invert_dictionary(sign_status_map)
+status_string_map = {done:u'Done',processed:u'Processed',inactive:u'Inactive',tickled:u'Tickled',unprocessed:u'Unprocessed'}
+project_dir_status_map = {u'Done':done,u'Review':inactive,u'Someday':someday,u'Tickled':tickled}
+status_project_dir_map = invert_dictionary(project_dir_status_map)
+
+file_name_regexp = re.compile('/?(?P<path>.*/)*(?P<file_name>.*)\....',re.U)
+
+def parse_lines(lines):
+    actions = []
+    infos = []
+    for line in lines:
+        if len(line) < 3:
+            continue
+        elif line[0]=='#':
+            infos.append(Info(line[1:].strip()))
+        else:
+            actions.append(parse_action(line))
+    return (actions,infos)
+
+
+def parse_action(string):
+    matching = action_regexp.match(string)
+    description = matching.group('description').rstrip(u' \r\n')
+    status_string = matching.group('status')
+    if (status_string == None):
+        status_string = u''
+    status = sign_status_map[status_string]
+    info = matching.group('info')
+    context = parse_context(matching.group('context'))
+    if(info==None):
+        info=u''
+    return Action(description,context,u'',info,status)
+def parse_context(context):
+    context_matching = context_regexp.match(context)
+    context_numbers = context_matching.group('numbers')
+    context_text = context_matching.group('text')
+    if(context_numbers in ABBREVIATIONS):
+        context=(unicode(ABBREVIATIONS[context_numbers])+context_text).rstrip(u'/')
+    else:
+        context=context_text
+    if (len(context)<2):
+        context = u'None'
+    return context
+
 def add_action_to_project(action,project):
     action.process()
     logger.log(u'Added action %s'%action.description,1)
@@ -109,6 +173,8 @@ class Action(WriteableItem):
         self.write()
     def is_active(self):
         return self.status in [processed,unprocessed]
+    def is_reviewable(self):
+        return self.status in [unprocessed,inactive]
     def is_not_done(self):
         return self.status in [processed,unprocessed,inactive]
     def file_name(self):
@@ -163,7 +229,7 @@ class Project(WriteableItem):
             self.actions=[]
             self.infos=[]
         else:
-            action_strings = parse_file_to_line_list(self.complete_file_path)
+            action_strings = mobilegtd.io.parse_file_to_line_list(self.complete_file_path)
             (self.actions,self.infos) = parse_lines(action_strings)
             for action in self.actions:
                 action.project = self.name()
@@ -242,25 +308,20 @@ class Project(WriteableItem):
         self.complete_file_path = WriteableItem.move_to(self,directory)
     def review(self):
         self.status = inactive
-        self.move_to(review_directory)
     def set_done(self):
         self.status = done
-        self.move_to(done_directory)
     def activate(self):
         self.status = processed
-        self.move_to(project_directory)
     def inactivate(self):
         for action in self.active_actions():
             action.deactivate()
         self.dirty = True
-    def defer(self,context=''):
+    def defer(self):
         self.inactivate()
         self.status = someday
-        self.move_to(u'%s/%s'%(someday_directory,context))
-    def tickle(self,time=''):
+    def tickle(self):
         self.inactivate()
         self.status = tickled
-        self.move_to(u'%s/%s'%(tickled_directory,time))
     def get_status(self):
         status_and_path = self.status_part_of_path()
         logger.log(u'Project with status %s'%status_and_path)
@@ -295,11 +356,10 @@ class Project(WriteableItem):
         os.renames(self.complete_file_path.encode('utf-8'),new_file_name.encode('utf-8'))
         self.complete_file_path = new_file_name
     def process(self):
-        project_changed = False
+        is_active = True
         days_since_last_activity = self.days_since_last_activity() 
         if days_since_last_activity > inactivity_threshold:
             self.inactivate()
-            self.review()
             logger.log(u'Review because of inactivity: %s'%self.name(),0)
         #logger.log(u'No change in %s since %s days.'%(self.name(),days_since_last_activity),0)
 
@@ -310,12 +370,21 @@ class Project(WriteableItem):
         self.write()
         if not self.has_active_actions():
             logger.log(u'Inactive: %s'%self.name(),0)
-            self.review()
+            return False
             logger.log(u'Review because of stalling: %s'%self.name(),0)
+        return True
       
 
 class Projects:
-    def __init__(self):
+    def __init__(self,project_directory):
+        self.review_directory = project_directory+'@Review/'
+        self.done_directory = project_directory+'@Done/'
+        self.someday_directory = project_directory+'@Someday/'
+        self.tickled_directory = project_directory+'@Tickled/'
+        self.project_dir_name = '@Projects/'
+        self.tickle_times=map(make_string_stripper(self.tickled_directory+'/'),mobilegtd.io.list_dir(self.tickled_directory,True,mobilegtd.io.is_dir))
+        self.someday_contexts=map(make_string_stripper(self.someday_directory+'/'),mobilegtd.io.list_dir(self.someday_directory,True,mobilegtd.io.is_dir))
+
         self.root = project_directory
         self.reread()
         self.status_to_list_map = { 
@@ -335,7 +404,7 @@ class Projects:
         self.tickled_projects = None
     def read(self,root,recursive=False):
         # TODO Use generic read function
-        return [Project(project_name) for project_name in list_dir(root, recursive, lambda name: name.endswith('.prj'))]
+        return [Project(project_name) for project_name in mobilegtd.io.list_dir(root, recursive, lambda name: name.endswith('.prj'))]
     def get_all_projects(self):
         return self.get_processed_projects() + self.get_review_projects() + \
             self.get_tickled_projects() + self.get_someday_projects()
@@ -349,15 +418,15 @@ class Projects:
         return self.processed_projects
     def get_review_projects(self):
         if self.review_projects == None:
-            self.review_projects = self.read(review_directory)
+            self.review_projects = self.read(self.review_directory)
         return self.review_projects
     def get_tickled_projects(self):
         if self.tickled_projects == None:
-            self.tickled_projects = self.read(tickled_directory,True)
+            self.tickled_projects = self.read(self.tickled_directory,True)
         return self.tickled_projects
     def get_someday_projects(self):
         if self.someday_projects == None:
-            self.someday_projects = self.read(someday_directory,True)
+            self.someday_projects = self.read(self.someday_directory,True)
         return self.someday_projects
     def sort_projects(self):
         projects = self.get_all_projects()
@@ -365,11 +434,42 @@ class Projects:
            self.status_to_list_map[project.get_status()].append(project)
     def add_project(self,project):
         self.processed_projects.insert(0,project)
-        
+    def create_project(self,project_name):
+        project_file_name = (project_directory+project_name+'.prj') #.encode( "utf-8" )
+        project = Project(project_file_name)
+        project.dirty=True
+        self.add_project(project)
+        project.write()
+
+
     def process(self):
         self.reread()
         logger.log(u'Updating Projects:')
         for project in self.get_active_projects():
             logger.log(project.name(),2)
-            project.process()
+            self.process_project(project)
         return True
+    
+    def process_project(self,project):
+        is_active = project.process()
+        if not is_active:
+            self.review(project)
+
+    
+    
+    def review(self,project):
+        project.review()
+        project.move_to(self.review_directory)
+    def set_done(self,project):
+        project.set_done()
+        project.move_to(self.done_directory)
+    def activate(self,project):
+        project.activate()
+        project.move_to(self.root)
+
+    def defer(self,project,context=''):
+        project.defer()
+        project.move_to(u'%s/%s'%(self.someday_directory,context))
+    def tickle(self,project,time=''):
+        project.tickle()
+        project.move_to(u'%s/%s'%(self.tickled_directory,time))

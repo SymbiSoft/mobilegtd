@@ -1,3 +1,51 @@
+import mobilegtd.model, mobilegtd.config
+import appuifw
+from mobilegtd.model import *
+from mobilegtd.config import *
+from mobilegtd.logging import logger
+from e32 import Ao_lock
+from key_codes import *
+import key_codes
+
+PROJECT_LIST_KEYS_AND_MENU = mobilegtd.config.Configuration(gtd_directory+"projects.cfg",mobilegtd.defaultconfig.default_projects_menu)
+ACTION_LIST_KEYS_AND_MENU = mobilegtd.config.Configuration(gtd_directory+"actions.cfg",mobilegtd.defaultconfig.default_actions_menu)
+
+
+
+def no_action():
+    pass
+
+def applicable_functions(obj,allowed_function_names):
+    function_names = [function_name for function_name in dir(obj) if function_name in allowed_function_names]
+    return [eval('obj.%s'%function_name) for function_name in function_names]
+
+def get_key(key_name):
+    if key_name == '':
+        key = None
+    else:
+        key=eval('EKey%s'%key_name)
+    return key
+
+def all_key_names():
+    return filter(lambda entry:entry[0:4]=='EKey',dir(key_codes))
+def all_key_values():
+    key_values=[
+                EKey0,
+                EKey1,
+                EKey2,
+                EKey3,
+                EKey4,
+                EKey5,
+                EKey6,
+                EKey7,
+                EKey8,
+                EKey9,
+                EKeyStar,
+                EKeyHash,
+                ]
+    return key_values
+
+
 def save_gui(object):
     object.old_gui = appuifw.app.body
     object.old_menu = appuifw.app.menu
@@ -14,12 +62,41 @@ def exit():
     appuifw.app.body.add('Exit')
     appuifw.app.body=None
     lock.signal()
-def change_description_for_action(action):
-    new_description = appuifw.query(u'Enter action','text',action.description)
+def change_description_for_action(action,info):
+    text = u'Enter action'
+    if info:
+        text = text+info
+    new_description = appuifw.query(text,'text',action.description)
     if new_description:
         action.set_description(new_description)
         return True
     return False
+#def new_action(projects):
+#    names = [project.name() for project in projects]
+#    names.insert(0, u'New Project')
+#    selected_project = appuifw.selection_list(names,search_field=1)
+#    if (selected_project == None):
+#        return False
+#    if (selected_project == 0):
+#        pass
+#    else:
+#        project = projects[selected_project-1]
+#        logger.log(u'Project %s'%project.name())
+#    if(not project in projects):
+#        projects.insert(0,project)
+#    (action,info)=ask_for_action_or_info(project.name())
+#    if action==None and info==None:
+#        pass
+#    elif info==None:
+#        add_action_to_project(action,project)
+#    else:
+#        project.get_infos().append(info)
+#        logger.log(u'Added info %s'%info,1)
+#    project.dirty=True
+#    project.write()
+#    logger.log('Project written',2)
+#    return True
+
 
 def ask_for_action(project_name,proposition=None):
     if proposition == None:
@@ -31,16 +108,14 @@ def ask_for_action(project_name,proposition=None):
         return parse_action(action_line)
 def ask_for_info(proposition):
     return appuifw.query(u'Enter info','text',u'%s'%(proposition))
-def new_project(proposed_name=u'',info=None):
+def new_project(projects,proposed_name=u'',info=None):
     if not info:
         info = u'Enter a name for the project'
     project_name = appuifw.query(info,'text',proposed_name.encode('utf-8'))
     if not project_name:
         return None
     logger.log(u'New project %s'%project_name)
-    project_file_name = (project_directory+project_name+'.prj') #.encode( "utf-8" )
-    project = Project(project_file_name)
-    project.dirty=True
+    project = projects.create_project(project_name)
     return project
 
 class SearchableListView(object):
@@ -170,13 +245,14 @@ class ProjectListView(EditableListView):
         self.reread_widgets()
     def all_widget_entries(self):
         return [entry.name_and_details() for entry in self.widgets]
-
+    def new_project(self):
+        new_project(self.projects)
     def generate_widgets(self):
 #        self.projects.sort_projects()
         widgets = []
         widgets.append(NewProjectWidget(self))
         widgets.append(NoProjectWidget())
-        widgets.extend([ProjectWidget(project) for project in self.filtered_list()])
+        widgets.extend([ProjectWidget(self.projects,project) for project in self.filtered_list()])
         try:
             widgets.extend([SMSWidget(sms_id,self.projects) for sms_id in Inbox(EInbox).sms_messages()])
         except Exception,e:
@@ -201,7 +277,7 @@ class SMSWidget:
     def change(self):
         self.view_sms()
     def create_project(self):
-        project = new_project(self.sender())
+        project = new_project(projects,self.sender())
         if project:
             for line in self.content().splitlines():
                 project.add_info(Info(line))
@@ -245,18 +321,16 @@ class NewProjectWidget:
     def __init__(self,projects):
         self.projects = projects
     def change(self):
-        project = new_project()
-        if project:
-            self.projects.add_project(project)
-            project.write()
+        project = new_project(projects)
     def list_repr(self):
         return u'New project'
     def name_and_details(self):
         return (self.list_repr(), u'')
 
 class ProjectWidget:
-    def __init__(self,project):
+    def __init__(self,projects,project):
         self.project = project
+        self.projects = projects
     def change(self):
         edit_view = ActionListView(self.project)
         edit_view.run()
@@ -274,9 +348,9 @@ class ProjectWidget:
             self.project.add_info(Info(info))
             self.project.write()
     def review(self):
-        self.project.review()
+        self.projects.review(self.project)
     def activate(self):
-        self.project.activate()
+        self.projects.activate(self.project)
     def process(self):
         appuifw.note(u'Processing %s'%self.project.name())
         self.project.process()
@@ -286,6 +360,7 @@ class ProjectWidget:
         if new_name != None:
             self.project.set_name(new_name)
     def remove(self):
+        appuifw.note(u'Remove')
         self.project.set_done()
     def list_repr(self):
         return self.project.name_with_status()
@@ -308,9 +383,9 @@ class ProjectWidget:
             self.project.activate()
             
     def tickle(self):
-        self.choose_and_execute(tickle_times,self.project.tickle)
+        self.choose_and_execute(self.projects.tickle_times,self.project.tickle)
     def defer(self):
-        self.choose_and_execute(someday_contexts,self.project.defer)
+        self.choose_and_execute(self.projects.someday_contexts,self.project.defer)
     def choose_and_execute(self,choices,function):
         if choices==None or len(choices)==0:
             function()
@@ -379,7 +454,7 @@ class ActionListView(EditableListView):
                 position = selected
             else:
                 position = None
-            self.project.add_info(Info(info),position)
+            self.project.add_info(mobilegtd.model.Info(info),position)
 
 
 
@@ -398,7 +473,7 @@ class ActionWidget:
             self.project.dirty=True
 
     def change_context(self):
-        new_context = appuifw.query(u'Enter context','text',self.action.context)
+        appuifw.query(u'Remove','text','testy')
         if new_context:
             self.action.set_context(parse_context(new_context))
         self.project.dirty=True
@@ -410,7 +485,7 @@ class ActionWidget:
         self.project.dirty=True
     def change_status(self):
         
-        if self.action.status in [unprocessed,inactive]:
+        if self.action.is_reviewable():
             self.action.process()
         elif self.action.status == processed:
             self.action.done()
@@ -439,9 +514,9 @@ class ContextWidget:
     def __init__(self,context,project):
         self.context = context
         self.project = project
-    def add_action_to_context(self):
+    def change(self):
         action = Action(self.project.name(),self.context,self.project.name())
-        if change_description_for_action(action):
+        if change_description_for_action(action,' for '+self.context):
             action.process()
             self.project.add_action(action)
     def list_repr(self):
@@ -450,5 +525,10 @@ class ContextWidget:
 class InfosWidget:
     def __init__(self,project):
         self.project = project
+    def change(self):
+        info = ask_for_info(self.project.name())
+        if info:
+            self.project.add_info(mobilegtd.model.Info(info),None)
+            self.project.dirty=True
     def list_repr(self):
         return u'Infos'

@@ -1,3 +1,8 @@
+import os,re,mobilegtd.io,mobilegtd.defaultconfig
+import appuifw
+configuration_regexp = re.compile('(?P<key>[^:]*):(?P<value>.*)',re.U)
+
+
 class odict(dict):
     def __init__(self):
         self._keys = []
@@ -29,6 +34,7 @@ class Configuration(odict):
     def __init__(self,complete_file_path,defaults={}):
         odict.__init__(self)
         self.file_path=complete_file_path
+
         self.read()
         if self.merge(defaults):
             self.write()
@@ -37,7 +43,7 @@ class Configuration(odict):
         if not os.path.isfile(self.file_path.encode('utf-8')):
             logger.log(u'Configuration file %s does not exist'%self.file_path)
             return
-        for line in parse_file_to_line_list(self.file_path):
+        for line in mobilegtd.io.parse_file_to_line_list(self.file_path):
             if len(line)<1:continue
             if line[0] == '#': continue
             matching = configuration_regexp.match(line)
@@ -61,23 +67,21 @@ class Configuration(odict):
                 
     def write(self):
         content = u'\n'.join([u'%s:%s'%(key,self.format_value(value)) for (key,value) in self.items()])
-        write(self.file_path,content)
+        mobilegtd.io.write(self.file_path,content)
     def format_value(self,value):
         if isinstance(value,list):
             return ','.join(value)
         else:
             return value
-COMMON_CONFIG = Configuration(main_config_file,default_configuration)
 
 
-      
+
+COMMON_CONFIG = Configuration(mobilegtd.defaultconfig.main_config_file,mobilegtd.defaultconfig.default_configuration)
+
+
+
 
 gtd_directory = COMMON_CONFIG['path']
-logger=FileLogger(gtd_directory+'gtd.log','w')
 inactivity_threshold = int(COMMON_CONFIG['inactivity_threshold'])
 project_directory = gtd_directory+'@Projects/'
-review_directory = project_directory+'@Review/'
-done_directory = project_directory+'@Done/'
-someday_directory = project_directory+'@Someday/'
-tickled_directory = project_directory+'@Tickled/'
-project_dir_name = '@Projects/'
+ABBREVIATIONS = Configuration(gtd_directory+"abbreviations.cfg",mobilegtd.defaultconfig.default_abbreviations)
