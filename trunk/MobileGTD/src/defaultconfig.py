@@ -11,10 +11,9 @@ default_actions_menu = {
 "add_info":"4,Add Info",
 "change_context":"5,Change Context",
 "change_status":"7,Change Status",
-"change":"8,Change Text",
-"add_action_to_context":"9,Add Action to Context",
+#"change":"8,Change Text",
 "search_item":"0,Search Item",
-"remove_entry":"Backspace,Remove Item",
+"remove":"Backspace,Remove Item",
 }
 
 default_projects_menu = {
@@ -28,7 +27,8 @@ default_projects_menu = {
 "tickle":"8,Tickle project",
 "rename":"9,Rename project",
 "search_item":"0,Search Item",
-"remove":"Backspace,Set project to done"
+"remove":"Backspace,Set project to done",
+"new_project":"Star,Create new project"
 }
 
 

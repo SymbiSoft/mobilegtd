@@ -1,3 +1,5 @@
+import os
+
 def safe_chdir(path_unicode):
     try:
         path = path_unicode.encode('utf-8')
