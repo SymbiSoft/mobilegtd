@@ -1,11 +1,14 @@
 import model, config
 import appuifw
+import thread
 from model import *
 from config import *
 from logging import logger
 from e32 import Ao_lock
 from key_codes import *
 import key_codes
+from inbox import EInbox,Inbox
+INBOX = Inbox(EInbox)
 
 PROJECT_LIST_KEYS_AND_MENU = config.Configuration(gtd_directory+"projects.cfg",defaultconfig.default_projects_menu)
 ACTION_LIST_KEYS_AND_MENU = config.Configuration(gtd_directory+"actions.cfg",defaultconfig.default_actions_menu)
@@ -58,10 +61,12 @@ def restore_gui(object):
     appuifw.app.menu = object.old_menu
     appuifw.app.exit_key_handler = object.old_exit_key_handler
     appuifw.app.title = object.old_title
-def exit():
-    appuifw.app.body.add('Exit')
-    appuifw.app.body=None
-    lock.signal()
+#def exit():
+#    appuifw.app.body.add('Exit')
+#    appuifw.app.body=None
+#    lock.signal()
+#    app.exit_key_handler = None
+#    appuifw.app.set_exit()
 def change_description_for_action(action,info):
     text = u'Enter action'
     if info:
@@ -71,31 +76,6 @@ def change_description_for_action(action,info):
         action.set_description(new_description)
         return True
     return False
-#def new_action(projects):
-#    names = [project.name() for project in projects]
-#    names.insert(0, u'New Project')
-#    selected_project = appuifw.selection_list(names,search_field=1)
-#    if (selected_project == None):
-#        return False
-#    if (selected_project == 0):
-#        pass
-#    else:
-#        project = projects[selected_project-1]
-#        logger.log(u'Project %s'%project.name())
-#    if(not project in projects):
-#        projects.insert(0,project)
-#    (action,info)=ask_for_action_or_info(project.name())
-#    if action==None and info==None:
-#        pass
-#    elif info==None:
-#        add_action_to_project(action,project)
-#    else:
-#        project.get_infos().append(info)
-#        logger.log(u'Added info %s'%info,1)
-#    project.dirty=True
-#    project.write()
-#    logger.log('Project written',2)
-#    return True
 
 
 def ask_for_action(project_name,proposition=None):
@@ -121,6 +101,7 @@ def new_project(projects,proposed_name=u'',info=None):
 class SearchableListView(object):
     def __init__(self,title,entry_filters,binding_map):
         self.title = title
+        self.exit_flag = False
         self.binding_map = binding_map
         self.current_entry_filter_index = 0
         self.entry_filters = entry_filters
@@ -137,22 +118,33 @@ class SearchableListView(object):
         self.set_bindings_for_selection(0)
         appuifw.app.body=self.view
         appuifw.app.exit_key_handler=self.exit
-        self.lock.wait()
+        try:
+            self.lock.wait()
+            while not self.exit_flag:
+                self.reread_widgets()
+                self.lock.wait()
+        except:
+            pass
     def exit(self):
+        self.exit_flag = True
         self.lock.signal()
         restore_gui(self)
 
-        
+    def update(self,subject):
+        self.lock.signal()
+        #pass
     def reread_widgets(self):
         self.widgets = self.generate_widgets()
-        self.update_existing_widgets()
-    def update_existing_widgets(self):
+        self.redisplay_widgets()
+    def redisplay_widgets(self):
         index = self.selected_index()
         if index > len(self.widgets):
             index = len(self.widgets)
         self.view.set_list(self.all_widget_entries(),index)
     def all_widget_entries(self):
         return self.all_widget_texts()
+    def all_widget_texts(self):
+        return [entry.list_repr() for entry in self.widgets]
     def remove_all_key_bindings(self):
         for key in all_key_values():
             self.view.bind(key,no_action)
@@ -200,8 +192,6 @@ class SearchableListView(object):
         self.current_entry_filter_index += 1
         self.filtered_list = self.entry_filters[self.current_entry_filter_index % len(self.entry_filters)]
         self.reread_widgets()
-    def all_widget_texts(self):
-        return [entry.list_repr() for entry in self.widgets]
 
 
 class EditableListView(SearchableListView):
@@ -218,7 +208,7 @@ class EditableListView(SearchableListView):
     def exec_and_update(self,function_name):
         entry = self.current_widget()
         exec('entry.%s()'%function_name)
-        self.update_existing_widgets()
+        self.redisplay_widgets()
 
     def key_and_menu_bindings(self,selected_index):
         key_and_menu_bindings=[]
@@ -233,13 +223,20 @@ class EditableListView(SearchableListView):
         self.exec_if_function_exists('change')
 
     def execute_and_update(self,function):
-        return lambda: (function(),logger.log(u'Called %s'%function),self.reread_widgets(),self.index_changed())
+        return lambda: (function(),self.reread_widgets(),self.index_changed())
 
 
 class ProjectListView(EditableListView):
     def __init__(self,projects):
         self.projects = projects
+        self.projects.attach(self)
         super(ProjectListView, self).__init__(u'Projects', [projects.get_active_projects,projects.get_all_projects,projects.get_inactive_projects],PROJECT_LIST_KEYS_AND_MENU)
+        thread.start_new_thread(projects.process,())
+    def exit(self):
+        self.exit_flag = True
+        self.lock.signal()
+        restore_gui(self)
+        appuifw.app.set_exit()
     def add_project(self,project):
         self.projects.add_project(project)
         self.reread_widgets()
@@ -248,14 +245,13 @@ class ProjectListView(EditableListView):
     def new_project(self):
         new_project(self.projects)
     def generate_widgets(self):
-#        self.projects.sort_projects()
         widgets = []
         widgets.append(NewProjectWidget(self))
         widgets.append(NoProjectWidget())
         widgets.extend([ProjectWidget(self.projects,project) for project in self.filtered_list()])
         if read_sms:
             try:
-                widgets.extend([SMSWidget(sms_id,self.projects) for sms_id in Inbox(EInbox).sms_messages()])
+                widgets.extend([SMSWidget(sms_id,self.projects) for sms_id in INBOX.sms_messages()])
             except Exception,e:
                 logger.log(u'No permission to access SMS inbox')
                 logger.log(unicode(repr(e.args)))
@@ -264,7 +260,7 @@ class ProjectListView(EditableListView):
     def process_all(self):
         appuifw.note(u'Processing all Projects')
         self.projects.process()
-        self.update_existing_widgets()
+        self.redisplay_widgets()
     def reread_projects(self):
         self.projects.reread()
         self.reread_widgets()
@@ -354,15 +350,14 @@ class ProjectWidget:
         self.projects.activate(self.project)
     def process(self):
         appuifw.note(u'Processing %s'%self.project.name())
-        self.project.process()
+        self.projects.process(self.project)
         
     def rename(self):
         new_name = appuifw.query(u'Enter new project name','text',u'%s'%self.project.name())
         if new_name != None:
             self.project.set_name(new_name)
     def remove(self):
-        appuifw.note(u'Remove')
-        self.project.set_done()
+        self.projects.set_done(self.project)
     def list_repr(self):
         return self.project.name_with_status()
     def name_and_details(self):
@@ -372,29 +367,19 @@ class ProjectWidget:
             details=self.project.additional_info()
         return (self.list_repr(),details)
 
-    def change_status(self):
-        status = self.project.get_status()
-        if status == processed:
-            self.project.review()
-        elif status == inactive:
-            self.project.tickle()
-        elif status == tickled:
-            self.project.defer()            
-        else:
-            self.project.activate()
-            
+       
     def tickle(self):
-        self.choose_and_execute(self.projects.tickle_times,self.project.tickle)
+        self.choose_and_execute(self.projects.tickle_times,self.projects.tickle)
     def defer(self):
-        self.choose_and_execute(self.projects.someday_contexts,self.project.defer)
+        self.choose_and_execute(self.projects.someday_contexts,self.projects.defer)
     def choose_and_execute(self,choices,function):
         if choices==None or len(choices)==0:
-            function()
+            function(self.project)
             return
         selected_item = appuifw.selection_list(choices,search_field=1)   
         
         if not selected_item==None:
-            function(choices[selected_item])
+            function(self.project,choices[selected_item])
         
     def review(self):
         self.project.review()

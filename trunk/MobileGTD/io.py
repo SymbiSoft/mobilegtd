@@ -60,6 +60,7 @@ def u_join(father,son):
 def read_text_from_file(unicode_file_name):
     f=file(unicode_file_name.encode('utf-8'),'r')
     raw=f.read()
+    f.close()
     (text,encoding)=guess_encoding(raw)
 
     return text

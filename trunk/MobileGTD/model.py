@@ -1,4 +1,4 @@
-import default,io,os,re,config,appuifw
+import io,os,re,config
 from time import *
 
 from logging import logger
@@ -93,12 +93,7 @@ class WriteableItem(ItemWithStatus):
     def __init__(self,status=unprocessed):
         super(WriteableItem, self).__init__(status)
     def write(self):
-        safe_chdir(self.path())
-        f = file(self.file_name().encode('utf-8'),'w')
-        content = self.file_string().encode('utf-8')
-        #logger.log( (u'Writing %s to %s'%(content,file_name)).encode('utf-8'),2)
-        f.write(content)
-        f.close()
+        io.write(u'%s/%s'%(self.path(),self.file_name()),self.file_string())
     def move_to(self,directory):
         self.write()
         new_file_name = u_join(directory,self.file_name())
@@ -360,37 +355,53 @@ class Project(WriteableItem):
         days_since_last_activity = self.days_since_last_activity() 
         if days_since_last_activity > inactivity_threshold:
             self.inactivate()
-            logger.log(u'Review because of inactivity: %s'%self.name(),0)
-        #logger.log(u'No change in %s since %s days.'%(self.name(),days_since_last_activity),0)
 
         for action in self.get_actions():
             if (action.update()):
                     self.dirty = True
-                    logger.log(u'%s %s'%(status_string_map[action.status],action.description),2)
         self.write()
         if not self.has_active_actions():
-            logger.log(u'Inactive: %s'%self.name(),0)
             return False
-            logger.log(u'Review because of stalling: %s'%self.name(),0)
         return True
       
 
 class Projects:
     def __init__(self,project_directory):
-        appuifw.note('Setting directories')
         self.review_directory = project_directory+'@Review/'
         self.done_directory = project_directory+'@Done/'
         self.someday_directory = project_directory+'@Someday/'
         self.tickled_directory = project_directory+'@Tickled/'
         self.project_dir_name = '@Projects/'
-        appuifw.note('Reading tickled and someday')
 
         self.tickle_times=map(make_string_stripper(self.tickled_directory+'/'),io.list_dir(self.tickled_directory,True,io.is_dir))
         self.someday_contexts=map(make_string_stripper(self.someday_directory+'/'),io.list_dir(self.someday_directory,True,io.is_dir))
-        appuifw.note('Reading projects from %s'%project_directory)
 
         self.root = project_directory
-        self.reread()
+        self.processed_projects = []
+        self.review_projects = []
+        self.someday_projects = []
+        self.tickled_projects = []
+        self.observers = []
+    def attach(self, observer):
+        if not observer in self.observers:
+            self.observers.append(observer)
+
+    def detach(self, observer):
+        try:
+            self.observers.remove(observer)
+        except ValueError:
+            pass
+
+    def notify(self, modifier=None):
+        for observer in self.observers:
+            if modifier != observer:
+                observer.update(self)
+    
+    def reread(self):
+        self.processed_projects = None
+        self.review_projects = None
+        self.someday_projects = None
+        self.tickled_projects = None
         self.status_to_list_map = { 
             processed :  self.processed_projects,
             unprocessed: self.review_projects,
@@ -399,13 +410,7 @@ class Projects:
             someday:     self.someday_projects,
             done: []
         }
-
-        
-    def reread(self):
-        self.processed_projects = None
-        self.review_projects = None
-        self.someday_projects = None
-        self.tickled_projects = None
+        #self.notify()
     def read(self,root,recursive=False):
         # TODO Use generic read function
         return [Project(project_name) for project_name in io.list_dir(root, recursive, lambda name: name.endswith('.prj'))]
@@ -439,7 +444,7 @@ class Projects:
     def add_project(self,project):
         self.processed_projects.insert(0,project)
     def create_project(self,project_name):
-        project_file_name = (project_directory+project_name+'.prj') #.encode( "utf-8" )
+        project_file_name = (project_directory+project_name+'.prj')
         project = Project(project_file_name)
         project.dirty=True
         self.add_project(project)
@@ -448,17 +453,16 @@ class Projects:
 
     def process(self):
         self.reread()
-        logger.log(u'Updating Projects:')
         for project in self.get_active_projects():
             logger.log(project.name(),2)
             self.process_project(project)
-        return True
+        self.reread()
+        self.notify()
     
     def process_project(self,project):
         is_active = project.process()
         if not is_active:
             self.review(project)
-
     
     
     def review(self,project):
@@ -477,3 +481,18 @@ class Projects:
     def tickle(self,project,time=''):
         project.tickle()
         project.move_to(u'%s/%s'%(self.tickled_directory,time))
+# Public API
+__all__= ('Projects',
+          'Project',
+          'Action',
+          'Info',
+          'unprocessed',
+            'processed',
+            'done',
+            'tickled',
+            'inactive',
+            'someday',
+            'info',
+            'parse_action'
+          
+          )
