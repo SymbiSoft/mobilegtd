@@ -1,5 +1,4 @@
 import os,re,io,defaultconfig
-import appuifw
 configuration_regexp = re.compile('(?P<key>[^:]*):(?P<value>.*)',re.U)
 
 
