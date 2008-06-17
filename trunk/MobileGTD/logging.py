@@ -1,5 +1,4 @@
 import os, io
-from config import gtd_directory
 
 class FileLogger:
     def __init__(self,file_path=u'C:/mobile_gtd.log',log_level = 8):
@@ -20,6 +19,7 @@ class ConsoleLogger:
     def __init__(self,log_level = 8):
         self.log_level = log_level
     def log(self,text,level=0):
+        import appuifw
         if level < self.log_level:
             appuifw.note(u''+repr(text))
     def close(self):
@@ -34,3 +34,4 @@ class NullLogger:
 #logger=FileLogger(gtd_directory+'gtd.log')
 #logger=NullLogger()
 logger=FileLogger()
+#logger=ConsoleLogger()

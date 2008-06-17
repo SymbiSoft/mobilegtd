@@ -1,11 +1,12 @@
 import os
 
-def safe_chdir(path_unicode):
-    try:
-        path = path_unicode.encode('utf-8')
-    except UnicodeError:
-        logger.log('Error decoding path %s'%repr(path_unicode))
-        return
+def safe_chdir(path):
+    #try:
+    #    path = path_unicode.encode('utf-8')
+    #except UnicodeError:
+    #    #logger.log('Error decoding path %s'%repr(path_unicode))
+    #    print 'Error decoding path %s'%repr(path_unicode)
+    #    path = path_unicode
     if not os.path.exists(path):
         os.makedirs(path)
     os.chdir(path)
@@ -29,10 +30,10 @@ def list_dir(root,recursive=False,filter=None):
     return all_files_and_dirs
 
 def guess_encoding(data):
+    #from logging import logger
     encodings = ['ascii','utf-8','utf-16']
     successful_encoding = None
     if data[:3]=='\xEF\xBB\xBF':
-        logger.log('Unicode BOM in %s'%repr(data),6)
         data = data[3:]
 
     for enc in encodings:
