@@ -1,6 +1,6 @@
 import os,re,io,defaultconfig
+from logging import logger
 configuration_regexp = re.compile('(?P<key>[^:]*):(?P<value>.*)',re.U)
-
 
 class odict(dict):
     def __init__(self):

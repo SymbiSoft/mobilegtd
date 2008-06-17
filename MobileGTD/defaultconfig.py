@@ -14,6 +14,7 @@ default_actions_menu = {
 "change_status":"7,Change Status",
 #"change":"8,Change Text",
 "search_item":"0,Search Item",
+"edit_menu":"5,Edit menu configuration",
 "remove":"Backspace,Remove Item",
 }
 
@@ -22,14 +23,16 @@ default_projects_menu = {
 "activate":"2,Schedule as active",
 "defer":"3,Defer Project",
 "reread_projects":"4,Reread Projects",
-"process":"5,Process Project",
 "process_all":"6,Process all Projects",
 "review":"7,Review Project",
 "tickle":"8,Tickle project",
 "rename":"9,Rename project",
 "search_item":"0,Search Item",
 "remove":"Backspace,Set project to done",
-"new_project":"Star,Create new project"
+"new_project":"Star,Create new project",
+"new_action":"Hash,Create new action",
+"edit_menu":"5,Edit menu configuration",
+"edit_config":"5,Edit global configuration"
 }
 
 

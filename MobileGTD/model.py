@@ -11,10 +11,9 @@ tickled = 3
 inactive = 4
 someday = 5
 info = 2
-
+logger.log(u'new version')
 action_regexp = re.compile('(?P<status>[+-/!])?\s*(?P<context>\S*)\s*(?P<description>[^\(]*)(\((?P<info>[^\)]*))?',re.U)
 context_regexp = re.compile('(?P<numbers>\d*)(?P<text>\D?.*)',re.U)
-
 
 def make_string_stripper(to_strip):
     return lambda x: x.replace(to_strip,'')
@@ -79,31 +78,32 @@ def compare_by_status(x,y):
 
 
 class ItemWithStatus(object):
-    def __init__(self,status):
-        self.status = status
     def status_string(self):
-        if self.status == unprocessed:
+        status = self.get_status()
+        if status == unprocessed:
             return u''
         else:
-            return u'%s '%status_sign_map[self.status]
-
+            return u'%s '%status_sign_map[status]
 
 
 class WriteableItem(ItemWithStatus):
-    def __init__(self,status=unprocessed):
-        super(WriteableItem, self).__init__(status)
+    def __init__(self):
+        super(WriteableItem, self).__init__()
     def write(self):
         io.write(u'%s/%s'%(self.path(),self.file_name()),self.file_string())
     def move_to(self,directory):
         self.write()
         new_file_name = u_join(directory,self.file_name())
         old_file_name = u_join(self.path(),self.file_name())
-        logger.log(u'Moving')
-        logger.log(repr(old_file_name.encode('utf-8')))
-        logger.log(repr(new_file_name.encode('utf-8')))
-        os.renames(old_file_name.encode('utf-8'),new_file_name.encode('utf-8'))
-        logger.log(u'Done moving')
-        return new_file_name
+        try:
+            os.renames(old_file_name.encode('utf-8'),new_file_name.encode('utf-8'))
+            logger.log(u'Moved %s to %s'%(repr(old_file_name),repr(new_file_name)))
+            return new_file_name
+        except OSError:
+            logger.log(u'Cannot move %s to %s: File already exists'%(repr(old_file_name),repr(new_file_name)))
+            return old_file_name
+
+
 
 class Info:
     def __init__(self,text=u''):
@@ -115,14 +115,15 @@ class Info:
         return self.text
 
 class Action(WriteableItem):
-
     def __init__(self,description,context,project,info='',status=unprocessed):
-        super(Action, self).__init__(status)
+        super(Action, self).__init__()
         self.project = project
         self.description = description
         self.context = context
         self.info = info
-
+        self.status = status
+    def get_status(self):
+        return self.status
     def update(self,path=gtd_directory):
         context_path = u_join(path,self.context)
         if (self.status == unprocessed):
@@ -215,9 +216,9 @@ class Project(WriteableItem):
         self.actions=None
         self.infos=None
         self.dirty = False
-        super(Project, self).__init__(self.get_status())
-        logger.log(u'Project %s is %s'%(self.name(),self.status))
-        self.read()
+        super(Project, self).__init__()
+        #logger.log(u'Project %s is %s'%(self.name(),self.status))
+        #self.read()
 
     def read(self):
         if not os.path.isfile(self.complete_file_path.encode('utf-8')):
@@ -254,7 +255,7 @@ class Project(WriteableItem):
             self.read()
         return self.infos
     def status_string(self):
-        if self.status == processed:
+        if self.get_status() == processed:
             return u''
         else:
             return ItemWithStatus.status_string(self)
@@ -272,11 +273,11 @@ class Project(WriteableItem):
         file_name=matching.group('file_name')
         return file_name
     def active_actions(self):
-        return filter(lambda action: action.is_active() ,self.actions)
+        return filter(lambda action: action.is_active() ,self.get_actions())
     def not_done_actions(self):
-        return filter(lambda action: action.is_not_done() ,self.actions)
+        return filter(lambda action: action.is_not_done() ,self.get_actions())
     def inactive_actions(self):
-        return filter(lambda action: not action.is_active() ,self.actions)
+        return filter(lambda action: not action.is_active() ,self.get_actions())
     def add_action(self,action):
         self.get_actions().append(action)
         self.dirty = True
@@ -301,27 +302,18 @@ class Project(WriteableItem):
         return os.path.basename(self.complete_file_path.encode('utf-8')).decode('utf-8')
     def move_to(self,directory):
         self.complete_file_path = WriteableItem.move_to(self,directory)
-    def review(self):
-        self.status = inactive
-    def set_done(self):
-        self.status = done
-    def activate(self):
-        self.status = processed
     def inactivate(self):
         for action in self.active_actions():
             action.deactivate()
         self.dirty = True
-    def defer(self):
-        self.inactivate()
-        self.status = someday
-    def tickle(self):
-        self.inactivate()
-        self.status = tickled
+    def activate(self):
+        for action in self.inactive_actions():
+            action.process()
+        self.dirty = True
+        self.write()
     def get_status(self):
         status_and_path = self.status_part_of_path()
-        logger.log(u'Project with status %s'%status_and_path)
         status_string = status_and_path[0]
-        logger.log(u'Project with status %s'%status_string)
         if status_string == '':
             return processed
         else:
@@ -341,6 +333,13 @@ class Project(WriteableItem):
         days = (time()-self.date_of_last_activity())/86400
         logger.log(u'No activity since %s days in %s'%(days,self.name()),0)
         return days
+    def get_tickle_date(self):
+        spp = self.status_part_of_path()
+        return extract_datetime(spp)
+    def should_not_be_tickled(self):
+        tickle_path = u'/'.join(self.status_part_of_path()[-2:])
+        logger.log(repr(tickle_path))
+        return TickleDirectory(tickle_path).is_obsolete()
     def scheduled_for_review(self):
         return self.path().endswith('@Review')
     def set_name(self,name):
@@ -351,10 +350,6 @@ class Project(WriteableItem):
         os.renames(self.complete_file_path.encode('utf-8'),new_file_name.encode('utf-8'))
         self.complete_file_path = new_file_name
     def process(self):
-        is_active = True
-        days_since_last_activity = self.days_since_last_activity() 
-        if days_since_last_activity > inactivity_threshold:
-            self.inactivate()
 
         for action in self.get_actions():
             if (action.update()):
@@ -362,8 +357,47 @@ class Project(WriteableItem):
         self.write()
         if not self.has_active_actions():
             return False
+        days_since_last_activity = self.days_since_last_activity() 
+        if days_since_last_activity > inactivity_threshold:
+            return False
         return True
-      
+date_regexp = re.compile('(?P<number>\d{1,2})(\D.*)?\Z',re.U)
+class TickleDirectory:
+    
+    def __init__(self,path):
+        self.path = path
+    def is_obsolete(self):
+        import datetime
+        logger.log('Testing for obsoleteness: %s'%self.path)
+        date = self.date()
+        if not date:
+            # This directory is not a month-day directory
+            return False
+        obsolete = date <= datetime.datetime.now()
+        if obsolete:
+            logger.log('Obsolete: %s'%self.path)
+        return obsolete
+    def date(self):
+        import datetime
+        spp = self.path.split(u'/')
+        try:
+            if len(spp) < 2 or len(spp[0]) == 0:
+                month_match = date_regexp.match(spp[-1])
+                if month_match == None:
+                    return None
+                month = int(month_match.group('number').rstrip(u' \r\n'))
+                day = 1
+            else:
+                month_match = date_regexp.match(spp[-2])
+                day_match = date_regexp.match(spp[-1])
+                if month_match == None or day_match == None:
+                    return None
+                month = int(month_match.group('number').rstrip(u' \r\n'))
+                day = int(day_match.group('number').rstrip(u' \r\n'))
+        except ValueError:
+            print repr(spp)
+        return datetime.datetime(datetime.datetime.now().year,month,day)
+
 
 class Projects:
     def __init__(self,project_directory):
@@ -373,8 +407,8 @@ class Projects:
         self.tickled_directory = project_directory+'@Tickled/'
         self.project_dir_name = '@Projects/'
 
-        self.tickle_times=map(make_string_stripper(self.tickled_directory+'/'),io.list_dir(self.tickled_directory,True,io.is_dir))
-        self.someday_contexts=map(make_string_stripper(self.someday_directory+'/'),io.list_dir(self.someday_directory,True,io.is_dir))
+        self.tickle_times=None
+        self.someday_contexts=None
 
         self.root = project_directory
         self.processed_projects = []
@@ -402,26 +436,29 @@ class Projects:
         self.review_projects = None
         self.someday_projects = None
         self.tickled_projects = None
-        self.status_to_list_map = { 
-            processed :  self.processed_projects,
-            unprocessed: self.review_projects,
-            inactive :   self.review_projects,
-            tickled:     self.tickled_projects,
-            someday:     self.someday_projects,
-            done: []
-        }
+        self.tickle_times = None
+        self.someday_contexts = None
+        
+    def get_tickle_times(self):
+        if self.tickle_times == None:
+                self.tickle_times=map(make_string_stripper(self.tickled_directory+'/'),io.list_dir(self.tickled_directory,True,io.is_dir))
+        return self.tickle_times
+    def get_someday_contexts(self):
+        if self.someday_contexts == None:
+            self.someday_contexts=map(make_string_stripper(self.someday_directory+'/'),io.list_dir(self.someday_directory,True,io.is_dir))
+        return self.someday_contexts
         #self.notify()
     def read(self,root,recursive=False):
         # TODO Use generic read function
         return [Project(project_name) for project_name in io.list_dir(root, recursive, lambda name: name.endswith('.prj'))]
     def get_all_projects(self):
-        return self.get_processed_projects() + self.get_review_projects() + \
+        return self.get_active_projects() + self.get_review_projects() + \
             self.get_tickled_projects() + self.get_someday_projects()
-    def get_active_projects(self):
-        return self.get_processed_projects() + self.get_review_projects()
+    def get_current_projects(self):
+        return self.get_active_projects() + self.get_review_projects()
     def get_inactive_projects(self):
         return self.get_tickled_projects() + self.get_someday_projects()
-    def get_processed_projects(self):
+    def get_active_projects(self):
         if self.processed_projects == None:
             self.processed_projects = self.read(self.root)
         return self.processed_projects
@@ -437,10 +474,17 @@ class Projects:
         if self.someday_projects == None:
             self.someday_projects = self.read(self.someday_directory,True)
         return self.someday_projects
-    def sort_projects(self):
-        projects = self.get_all_projects()
-        for project in projects:
-           self.status_to_list_map[project.get_status()].append(project)
+    def get_current_tickled_projects(self):
+        current_tickled_projects = []
+        logger.log(u'Reading tickled projects')
+        tickled_projects = self.get_tickled_projects()
+        logger.log(u'Read tickled projects')
+        for project in tickled_projects:
+            logger.log(u'Testing tickled project %s'%project.name())
+            if project.should_not_be_tickled():
+                current_tickled_projects.append(project)
+        return current_tickled_projects
+                
     def add_project(self,project):
         self.processed_projects.insert(0,project)
     def create_project(self,project_name):
@@ -449,16 +493,33 @@ class Projects:
         project.dirty=True
         self.add_project(project)
         project.write()
+        return project
 
 
     def process(self):
-        self.reread()
-        for project in self.get_active_projects():
-            logger.log(project.name(),2)
-            self.process_project(project)
-        self.reread()
-        self.notify()
-    
+        try:
+            self.reread()
+            logger.log('Searching for projects without next action')
+            for project in self.get_active_projects():
+                logger.log(project.name(),2)
+                self.process_project(project)
+            logger.log('Searching for projects that should be untickled')
+            for project in self.get_current_tickled_projects():
+                logger.log('Untickling %s'%project.name())
+                self.review(project)
+                project.activate()
+            logger.log('Removing obsolete tickle directories')
+            for tickle_dir in self.get_tickle_times():
+                if TickleDirectory(tickle_dir).is_obsolete():
+                    try:
+                        os.removedirs(u'%s/%s'%(self.tickled_directory,tickle_dir))
+                    except OSError:
+                        pass
+                
+            self.reread()
+            self.notify()
+        except:
+            logger.log("Unexpected error: %s"%sys.exc_info()[0])
     def process_project(self,project):
         is_active = project.process()
         if not is_active:
@@ -466,20 +527,18 @@ class Projects:
     
     
     def review(self,project):
-        project.review()
         project.move_to(self.review_directory)
     def set_done(self,project):
-        project.set_done()
+        project.inactivate()
         project.move_to(self.done_directory)
     def activate(self,project):
-        project.activate()
         project.move_to(self.root)
 
     def defer(self,project,context=''):
-        project.defer()
+        project.inactivate()
         project.move_to(u'%s/%s'%(self.someday_directory,context))
     def tickle(self,project,time=''):
-        project.tickle()
+        project.inactivate()
         project.move_to(u'%s/%s'%(self.tickled_directory,time))
 # Public API
 __all__= ('Projects',
