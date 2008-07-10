@@ -10,5 +10,4 @@ But nonetheless, here is how you can change this.
 == Version 0.9.5 ==
 Edit the main configuration file (usually at c:\system\data\mobile_gtd.cfg) and set read_sms:0
 == Version 1.0 ==
-In MobileGTD choose "Options" -> "Edit global configuration" and set read_sms to 0 there.
-
+In MobileGTD choose "Options" -> "Edit global configuration" and set read_sms to 0.
