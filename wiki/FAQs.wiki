@@ -3,12 +3,12 @@
 
 = Can I configure MobileGTD so that SMS messages do not show up? =
 
-Add your content here.
+Yes, starting from version 0.9.5 you can.
+The reason for including the SMS messages here, is that often there is an action or project resulting from the message.
+I move all messages to custom folders "Reference" or "Done", so my SMS inbox, like my EMail inbox is empty.
+But nonetheless, here is how you can change this.
+== Version 0.9.5 ==
+Edit the main configuration file (usually at c:\system\data\mobile_gtd.cfg) and set read_sms:0
+== Version 1.0 ==
+In MobileGTD choose "Options" -> "Edit global configuration" and set read_sms to 0 there.
 
-
-= Details =
-
-Add your content here.  Format your content with:
-  * Text in *bold* or _italic_
-  * Headings, paragraphs, and lists
-  * Automatic links to other wiki pages
