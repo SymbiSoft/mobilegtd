@@ -45,8 +45,10 @@ try:
         os.makedirs(project_directory)
     
     
-    
-    
+    import logging
+    from logging import logger
+    logger.log_stderr()
+    sys.stderr.write('stderr logged from default')
 
 #    logger.log(u'Configuration')
 #    logger.log(repr(COMMON_CONFIG))
@@ -57,6 +59,7 @@ try:
     projects = model.Projects(project_directory)
     projects_view = gui.ProjectListView(projects)
     projects_view.run()
+    #logger.close()
 except Exception, e:
     def display(objects):
         strings=[]
@@ -82,5 +85,5 @@ except Exception, e:
     #appuifw.app.exit_key_handler=gui.exit
     lock.wait()
 
-#logger.close()
+logger.close()
 #tr.stop()

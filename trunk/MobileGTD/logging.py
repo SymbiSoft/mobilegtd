@@ -7,13 +7,27 @@ class FileLogger:
         self.log_level = log_level
         io.write(file_path,u'')
         #self.log_file = file(file_path.encode('utf-8'),'w')
+        self.log_file = file(self.file_path,'a')
+    def log_stderr(self):
+        import sys
+        self.old_stderr = sys.stderr
+        sys.stderr = self.log_file
+        sys.stderr.write('stderr logged from logging\n')
+        self.log_file.flush()
+
+    def unlog_stderr(self):
+        import sys
+        sys.stderr = self.old_stderr
     def log(self,text,level=0):
-        if level < self.log_level:
-            self.log_file = file(self.file_path,'a')
+        if level < self.log_level:          
             self.log_file.write(text.encode('utf-8')+'\n')
-            self.log_file.close()
+            self.log_file.flush()
     def close(self):
+        self.log(u'Closing log')
+        self.log_file.flush()
         self.log_file.close()
+        
+        
 
 class ConsoleLogger:
     def __init__(self,log_level = 8):

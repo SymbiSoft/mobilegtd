@@ -114,16 +114,76 @@ def change_description_for_action(action,info=None):
         action.set_description(new_description)
         return True
     return False
+## Simple MyFormView class to demonstrate the use of forms.
+class ActionView( object ):
+    
+    ## The constructor.
+    def __init__( self, action):
+        self.action = action
+        ## Bool
+        self.saved = False
+ 
+        ## Form fields.
 
+ 
+ 
+    ## Displays the form.
+    def setActive( self ):
+        self.saved = False
+        fields = [(u'Context','text',self.action.context),
+                  (u'Description','text',self.action.description),
+                  (u'Info','text',self.action.info)]
+        self.form = appuifw.Form(fields, appuifw.FFormEditModeOnly)
+            
+        self.form.save_hook = self.markSaved
+        self.form.flags = appuifw.FFormEditModeOnly
+        self.form.execute( )
+ 
+ 
+    ## save_hook send True if the form has been saved.
+    def markSaved( self, saved ):
+        if saved and self.is_valid():
+            self.action.context = self.get_context()
+            self.action.description = self.get_description()
+            self.action.info = self.get_info()
+ 
+    def isSaved( self ):
+        return self.saved
+ 
+    ## Return field value.
+    def get_description( self ):
+        return self.form[1][2].encode( "utf-8" )
+ 
+ 
+    ## Return model field value..
+    def get_context( self ):
+        return self.form[0][2].encode( "utf-8" )
+    def is_valid(self):
+        return len(self.form[0]) > 2 and len(self.form[1]) > 2
+ 
+    ## Return amount field value.
+    def get_info( self ):
+        return self.form[2][2]
 
 def ask_for_action(project_name,proposition=None):
     if proposition == None:
         proposition = u'Context %s'%(project_name)
-    action_line = appuifw.query(u'Enter action %s'%project_name,'text',proposition)
-    if action_line == None:
-        return None
-    else:
-        return parse_action(action_line)
+    #context_and_description = appuifw.multi_query(u'Context',u'Description')
+    action = Action(project_name,u'',u'',u'',u'')
+    f = ActionView(action)
+    # make the form visible on the UI
+    f.setActive()
+    
+    return action
+
+#def ask_for_action(project_name,proposition=None):
+#    if proposition == None:
+#        proposition = u'Context %s'%(project_name)
+#    action_line = appuifw.query(u'Enter action %s'%project_name,'text',proposition)
+#    if action_line == None:
+#        return None
+#    else:
+#        return parse_action(action_line)
 def ask_for_info(proposition):
     return appuifw.query(u'Enter info','text',u'%s'%(proposition))
 
@@ -355,7 +415,7 @@ class SMSWidget:
 
 class NewActionWidget:
     def change(self):
-        action = ask_for_action("without project",u"Context Action-Description")
+        action = ask_for_action(u"No project")
         if action:
             action.process()
         return action
@@ -390,7 +450,7 @@ class ProjectWidget:
         self.project = project
         self.projects = projects
     def change(self):
-        edit_view = ActionListView(self.project)
+        edit_view = ProjectView(self.project, self.projects)
         edit_view.run()
 
     def add_action(self):
@@ -454,14 +514,17 @@ class DisplayableFunction:
     def execute(self):
         function()
 
-class ActionListView(EditableListView):
-    def __init__(self,project):
+class ProjectView(EditableListView):
+    def __init__(self,project,projects):
         self.project = project
-        super(ActionListView, self).__init__(self.project_name(), [self.project.not_done_actions,self.project.get_actions,self.project.inactive_actions], ACTION_LIST_KEYS_AND_MENU)
+        self.projects = projects
+        super(ProjectView, self).__init__(self.project_name(), [self.project.not_done_actions,self.project.get_actions,self.project.inactive_actions], ACTION_LIST_KEYS_AND_MENU)
 
     def exit(self):
         EditableListView.exit(self)
+        self.project.dirty = True
         self.project.write()
+        self.projects.update_status(self.project)
     def edit_menu(self):
         show_config(ACTION_LIST_KEYS_AND_MENU)
         ACTION_LIST_KEYS_AND_MENU.write()
