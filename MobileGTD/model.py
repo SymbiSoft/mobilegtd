@@ -70,7 +70,6 @@ def parse_context(context):
 
 def add_action_to_project(action,project):
     action.process()
-    logger.log(u'Added action %s'%action.description,1)
     project.add_action(action)
     project.write()
 def compare_by_status(x,y):
@@ -219,7 +218,10 @@ class Project(WriteableItem):
         super(Project, self).__init__()
         #logger.log(u'Project %s is %s'%(self.name(),self.status))
         #self.read()
-
+    def __eq__(self, project):
+        return self.complete_file_path == project.complete_file_path
+    def __ne__(self,project):
+        return not self.__eq__(project)
     def read(self):
         if not os.path.isfile(self.complete_file_path.encode('utf-8')):
             self.actions=[]
@@ -307,10 +309,11 @@ class Project(WriteableItem):
             action.deactivate()
         self.dirty = True
     def activate(self):
-        for action in self.inactive_actions():
+        for action in self.not_done_actions():
             action.process()
         self.dirty = True
         self.write()
+
     def get_status(self):
         status_and_path = self.status_part_of_path()
         status_string = status_and_path[0]
@@ -327,18 +330,17 @@ class Project(WriteableItem):
             return split_path[project_index+1:]
     def date_of_last_activity(self):
         file_name = self.complete_file_path.encode('utf-8')
-        logger.log(repr('Counting inactivity for %s.'%file_name),0)
+        logger.log(repr('Counting inactivity for %s.'%file_name),3)
         return os.path.getmtime(file_name)
     def days_since_last_activity(self):
         days = (time()-self.date_of_last_activity())/86400
-        logger.log(u'No activity since %s days in %s'%(days,self.name()),0)
+        logger.log(u'No activity since %s days in %s'%(days,self.name()),3)
         return days
     def get_tickle_date(self):
         spp = self.status_part_of_path()
         return extract_datetime(spp)
     def should_not_be_tickled(self):
         tickle_path = u'/'.join(self.status_part_of_path()[-2:])
-        logger.log(repr(tickle_path))
         return TickleDirectory(tickle_path).is_obsolete()
     def scheduled_for_review(self):
         return self.path().endswith('@Review')
@@ -368,14 +370,11 @@ class TickleDirectory:
         self.path = path
     def is_obsolete(self):
         import datetime
-        logger.log('Testing for obsoleteness: %s'%self.path)
         date = self.date()
         if not date:
             # This directory is not a month-day directory
             return False
         obsolete = date <= datetime.datetime.now()
-        if obsolete:
-            logger.log('Obsolete: %s'%self.path)
         return obsolete
     def date(self):
         import datetime
@@ -476,55 +475,57 @@ class Projects:
         return self.someday_projects
     def get_current_tickled_projects(self):
         current_tickled_projects = []
-        logger.log(u'Reading tickled projects')
         tickled_projects = self.get_tickled_projects()
-        logger.log(u'Read tickled projects')
         for project in tickled_projects:
-            logger.log(u'Testing tickled project %s'%project.name())
             if project.should_not_be_tickled():
                 current_tickled_projects.append(project)
         return current_tickled_projects
                 
     def add_project(self,project):
-        self.processed_projects.insert(0,project)
+        # Projects are not being reread
+        if self.processed_projects:
+            self.get_active_projects().insert(0,project)
     def create_project(self,project_name):
         project_file_name = (project_directory+project_name+'.prj')
         project = Project(project_file_name)
         project.dirty=True
-        self.add_project(project)
         project.write()
+        self.add_project(project)
         return project
 
 
     def process(self):
-        try:
-            self.reread()
-            logger.log('Searching for projects without next action')
-            for project in self.get_active_projects():
-                logger.log(project.name(),2)
-                self.process_project(project)
-            logger.log('Searching for projects that should be untickled')
-            for project in self.get_current_tickled_projects():
-                logger.log('Untickling %s'%project.name())
-                self.review(project)
-                project.activate()
-            logger.log('Removing obsolete tickle directories')
-            for tickle_dir in self.get_tickle_times():
-                if TickleDirectory(tickle_dir).is_obsolete():
-                    try:
-                        os.removedirs(u'%s/%s'%(self.tickled_directory,tickle_dir))
-                    except OSError:
-                        pass
-                
-            self.reread()
-            self.notify()
-        except:
-            logger.log("Unexpected error: %s"%sys.exc_info()[0])
+
+        self.reread()
+        logger.log('Searching for projects without next action')
+        for project in self.get_active_projects():
+            logger.log(project.name(),2)
+            self.process_project(project)
+        logger.log('Searching for projects that should be untickled')
+        for project in self.get_current_tickled_projects():
+            self.review(project)
+            project.activate()
+        logger.log('Removing obsolete tickle directories')
+        for tickle_dir in self.get_tickle_times():
+            if TickleDirectory(tickle_dir).is_obsolete():
+                try:
+                    os.removedirs(u'%s/%s'%(self.tickled_directory,tickle_dir))
+                except OSError:
+                    pass
+            
+        self.reread()
+        self.notify()
+
     def process_project(self,project):
         is_active = project.process()
         if not is_active:
             self.review(project)
-    
+        
+    def update_status(self,project):
+        if project.has_active_actions() and project.get_status()==inactive:
+            self.activate(project)
+        elif not project.has_active_actions() and project.get_status() == processed:
+            self.review(project)
     
     def review(self,project):
         project.move_to(self.review_directory)

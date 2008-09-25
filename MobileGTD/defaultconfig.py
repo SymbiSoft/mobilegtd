@@ -3,7 +3,8 @@ main_config_file = 'C:/System/Data/mobile_gtd.cfg'
 default_configuration = {"screen":"normal",
 "path":"C:/Data/GTD/",
 "inactivity_threshold":"7",
-"read_sms":"1"
+"read_sms":"1",
+"action_editor":"form"
 }
 
 default_actions_menu = {
