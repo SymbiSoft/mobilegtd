@@ -287,7 +287,7 @@ class Project(WriteableItem):
         self.get_actions().append(action)
         self.dirty = True
     def add_info(self,info,position=None):
-        if not position:
+        if position == None:
             self.get_infos().append(info)
         else:
             self.get_infos().insert(position,info)
