@@ -114,7 +114,7 @@ class Info:
         return self.text
 
 class Action(WriteableItem):
-    def __init__(self,description,context,project,info='',status=unprocessed):
+    def __init__(self,description,context,project,info=u'',status=unprocessed):
         super(Action, self).__init__()
         self.project = project
         self.description = description

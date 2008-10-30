@@ -12,76 +12,62 @@ from gui import *
 
 ACTION_LIST_KEYS_AND_MENU = config.Configuration(gtd_directory+"actions.cfg",defaultconfig.default_actions_menu)
 
-def change_description_for_action(action,info=None):
-    text = u'Enter action'
-    if info:
-        text = text+info
-    new_description = appuifw.query(text,'text',action.description)
-    if new_description:
-        action.set_description(new_description)
-        return True
-    return False
-## Simple MyFormView class to demonstrate the use of forms.
 class ActionView( object ):
     
-    ## The constructor.
     def __init__( self, action):
         self.action = action
-        ## Bool
         self.saved = False
  
-        ## Form fields.
 
  
  
     ## Displays the form.
-    def setActive( self ):
+    def execute( self ):
         self.saved = False
         fields = [(u'Context','text',self.action.context),
         (u'Description','text',self.action.description),
         (u'Info','text',self.action.info)]
+        logger.log(repr(fields))
         self.form = appuifw.Form(fields, appuifw.FFormEditModeOnly)
         
         self.form.save_hook = self.markSaved
         self.form.flags = appuifw.FFormEditModeOnly
         self.form.execute( )
+        if self.saved:
+            self.action.context = self.get_context()
+            self.action.description = self.get_description()
+            self.action.info = self.get_info()
  
  
     ## save_hook send True if the form has been saved.
     def markSaved( self, saved ):
         if saved and self.is_valid():
-            self.action.context = self.get_context()
-            self.action.description = self.get_description()
-            self.action.info = self.get_info()
- 
+            self.saved = True
+        return self.saved
     def isSaved( self ):
         return self.saved
  
-    ## Return field value.
     def get_description( self ):
-        return self.form[1][2].encode( "utf-8" )
+        return self.form[1][2]
  
  
-    ## Return model field value..
+
     def get_context( self ):
-        return self.form[0][2].encode( "utf-8" )
+        return self.form[0][2]
     def is_valid(self):
         return len(self.form[0]) > 2 and len(self.form[1]) > 2
  
-    ## Return amount field value.
+
     def get_info( self ):
         return self.form[2][2]
 
 def ask_for_action(project_name,proposition=None):
-    if proposition == None:
-        proposition = u'Context %s'%(project_name)
-    #context_and_description = appuifw.multi_query(u'Context',u'Description')
+
     action = Action(project_name,u'',u'',u'',u'')
-    f = ActionView(action)
-    # make the form visible on the UI
-    f.setActive()
+    edit_action(action)
     
     return action
+
 
 #def ask_for_action(project_name,proposition=None):
 #    if proposition == None:
@@ -91,6 +77,22 @@ def ask_for_action(project_name,proposition=None):
 #        return None
 #    else:
 #        return parse_action(action_line)
+
+def edit_action(action):
+    f = ActionView(action)
+    f.execute()
+    return f.saved
+#    text = u'Enter action'
+#    if info:
+#        text = text+info
+#    new_description = appuifw.query(text,'text',action.description)
+#    if new_description:
+#        action.set_description(new_description)
+#        return True
+#    return False
+
+
+
 def ask_for_info(proposition):
     return appuifw.query(u'Enter info','text',u'%s'%(proposition))
 
@@ -163,14 +165,10 @@ class ActionWidget:
         self.project.remove_action(self.action)
         self.project.add_info(self.action.context_description_info())
     def change(self):
-        if change_description_for_action(self.action):
+        if edit_action(self.action):
             self.project.dirty=True
 
-    def change_context(self):
-        new_context = appuifw.query(u'Enter new context','text',self.action.context)
-        if new_context:
-            self.action.set_context(model.parse_context(new_context))
-        self.project.dirty=True
+
     def remove(self):
         self.action.remove()
         self.project.remove_action(self.action)
@@ -210,7 +208,7 @@ class ContextWidget:
         self.project = project
     def change(self):
         action = Action(self.project.name(),self.context,self.project.name())
-        if change_description_for_action(action,' for '+self.context):
+        if edit_action(action):
             action.process()
             self.project.add_action(action)
     def list_repr(self):

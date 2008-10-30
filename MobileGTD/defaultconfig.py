@@ -11,7 +11,6 @@ default_actions_menu = {
 "switch_entry_filter":"1,Toggle Active/All/Inactive Actions",
 "add_action":"2,Add Action",
 "add_info":"4,Add Info",
-"change_context":"5,Change Context",
 "change_status":"7,Change Status",
 #"change":"8,Change Text",
 "search_item":"0,Search Item",
