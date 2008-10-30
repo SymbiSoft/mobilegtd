@@ -32,7 +32,7 @@ try:
     #display(sys.path)
     import config, defaultconfig
     
-    import gui,model
+    import gui,model,project_list_view
     import io
     from config import *
     
@@ -57,7 +57,7 @@ try:
 #    logger.log(u'Keys and Menus')
 #    logger.log(repr(ACTION_LIST_KEYS_AND_MENU))
     projects = model.Projects(project_directory)
-    projects_view = gui.ProjectListView(projects)
+    projects_view = project_list_view.ProjectListView(projects)
     projects_view.run()
     #logger.close()
 except Exception, e:
