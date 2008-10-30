@@ -144,7 +144,8 @@ class SearchableListView(object):
         self.widgets = self.generate_widgets()
         self.redisplay_widgets()
     def redisplay_widgets(self):
-        index = self.selected_index()
+        self.set_index(self.selected_index())
+    def set_index(self,index):
         if index > len(self.widgets):
             index = len(self.widgets)
         self.view.set_list(self.all_widget_entries(),index)

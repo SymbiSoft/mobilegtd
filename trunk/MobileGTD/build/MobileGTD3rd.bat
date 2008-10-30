@@ -1,4 +1,4 @@
-cd C:\Symbian\9.1\S60_3rd_MR\Epoc32\winscw\c\python
+cd ..
 xcopy /R /Y *.py C:\temp\MobileGTD\
 
 

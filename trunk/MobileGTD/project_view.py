@@ -155,11 +155,13 @@ class ProjectView(EditableListView):
         info = ask_for_info(self.project.name())
         if info:
             selected = self.selected_index()
-            if selected>0 and selected < len(self.project.get_infos()):
+            if selected>=0 and selected < len(self.project.get_infos()):
                 position = selected
             else:
                 position = None
             self.project.add_info(model.Info(info),position)
+            if position:
+                self.set_index(position+1)
 
 
 
@@ -229,7 +231,7 @@ class InfosWidget:
     def change(self):
         info = ask_for_info(self.project.name())
         if info:
-            self.project.add_info(model.Info(info),None)
+            self.project.add_info(model.Info(info),0)
             self.project.dirty=True
     def list_repr(self):
         return u'Infos'
