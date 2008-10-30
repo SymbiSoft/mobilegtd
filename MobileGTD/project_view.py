@@ -34,11 +34,20 @@ class ActionView( object ):
         self.form.flags = appuifw.FFormEditModeOnly
         self.form.execute( )
         if self.saved:
-            self.action.context = self.get_context()
-            self.action.description = self.get_description()
-            self.action.info = self.get_info()
+            self.save_fields()
  
- 
+    def save_fields(self):
+        context = self.get_context()
+        if len(context.strip()) == 0:
+            context,description,info,status = parse_action_line(self.get_description())
+        else:
+            description = self.get_description()
+        if len(self.get_info().strip()) > 0:
+            info = self.get_info()
+        self.action.context = context
+        self.action.description = description
+        self.action.info = info
+	        
     ## save_hook send True if the form has been saved.
     def markSaved( self, saved ):
         if saved and self.is_valid():

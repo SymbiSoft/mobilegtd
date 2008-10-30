@@ -43,8 +43,7 @@ def parse_lines(lines):
             actions.append(parse_action(line))
     return (actions,infos)
 
-
-def parse_action(string):
+def parse_action_line(string):
     matching = action_regexp.match(string)
     description = matching.group('description').rstrip(u' \r\n')
     status_string = matching.group('status')
@@ -55,6 +54,10 @@ def parse_action(string):
     context = parse_context(matching.group('context'))
     if(info==None):
         info=u''
+    return context,description,info,status    
+
+def parse_action(string):
+    context,description,info,status  = parse_action_line(string)
     return Action(description,context,u'',info,status)
 def parse_context(context):
     context_matching = context_regexp.match(context)
@@ -553,6 +556,7 @@ __all__= ('Projects',
             'inactive',
             'someday',
             'info',
-            'parse_action'
+            'parse_action',
+            'parse_action_line'
           
           )
