@@ -23,6 +23,8 @@ class FileLogger:
             self.log_file.write(text.encode('utf-8')+'\n')
             self.log_file.flush()
     def close(self):
+        #sys.stderr.flush()
+        self.unlog_stderr()
         self.log(u'Closing log')
         self.log_file.flush()
         self.log_file.close()

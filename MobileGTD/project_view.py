@@ -155,7 +155,8 @@ class ProjectView(EditableListView):
         info = ask_for_info(self.project.name())
         if info:
             selected = self.selected_index()
-            if selected>=0 and selected < len(self.project.get_infos()):
+            # First position is "Infos"
+            if selected>=0 and selected <= len(self.project.get_infos()):
                 position = selected
             else:
                 position = None
