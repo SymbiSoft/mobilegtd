@@ -136,7 +136,8 @@ class SearchableListView(object):
         self.exit_flag = True
         self.lock.signal()
 
-    def update(self,subject):
+    def update(self,subject=None):
+        #logger.log(u'Updated %s'%repr(self))
         if self.lock:
             self.lock.signal()
         #pass

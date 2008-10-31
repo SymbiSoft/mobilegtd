@@ -11,7 +11,7 @@ tickled = 3
 inactive = 4
 someday = 5
 info = 2
-logger.log(u'new version')
+#logger.log(u'new version')
 action_regexp = re.compile('(?P<status>[+-/!])?\s*(?P<context>\S*)\s*(?P<description>[^\(]*)(\((?P<info>[^\)]*))?',re.U)
 context_regexp = re.compile('(?P<numbers>\d*)(?P<text>\D?.*)',re.U)
 
@@ -99,10 +99,10 @@ class WriteableItem(ItemWithStatus):
         old_file_name = u_join(self.path(),self.file_name())
         try:
             os.renames(old_file_name.encode('utf-8'),new_file_name.encode('utf-8'))
-            logger.log(u'Moved %s to %s'%(repr(old_file_name),repr(new_file_name)))
+            ##logger.log(u'Moved %s to %s'%(repr(old_file_name),repr(new_file_name)))
             return new_file_name
         except OSError:
-            logger.log(u'Cannot move %s to %s: File already exists'%(repr(old_file_name),repr(new_file_name)))
+            #logger.log(u'Cannot move %s to %s: File already exists'%(repr(old_file_name),repr(new_file_name)))
             return old_file_name
 
 
@@ -129,13 +129,13 @@ class Action(WriteableItem):
     def update(self,path=gtd_directory):
         context_path = u_join(path,self.context)
         if (self.status == unprocessed):
-            logger.log('Processing %s'%self.description,3)
+            ##logger.log('Processing %s'%self.description,3)
             self.process()
             return True
         elif(self.status == processed):
             file_name = self.file_name()
             path_and_file=u_join(context_path,file_name)
-            logger.log(repr(path_and_file),4)
+            #logger.log(repr(path_and_file),4)
 
             if not os.path.isfile(path_and_file.encode('utf-8')):
                 self.status = done
@@ -219,7 +219,7 @@ class Project(WriteableItem):
         self.infos=None
         self.dirty = False
         super(Project, self).__init__()
-        #logger.log(u'Project %s is %s'%(self.name(),self.status))
+        ##logger.log(u'Project %s is %s'%(self.name(),self.status))
         #self.read()
     def __eq__(self, project):
         return self.complete_file_path == project.complete_file_path
@@ -333,11 +333,11 @@ class Project(WriteableItem):
             return split_path[project_index+1:]
     def date_of_last_activity(self):
         file_name = self.complete_file_path.encode('utf-8')
-        logger.log(repr('Counting inactivity for %s.'%file_name),3)
+        #logger.log(repr('Counting inactivity for %s.'%file_name),3)
         return os.path.getmtime(file_name)
     def days_since_last_activity(self):
         days = (time()-self.date_of_last_activity())/86400
-        logger.log(u'No activity since %s days in %s'%(days,self.name()),3)
+        #logger.log(u'No activity since %s days in %s'%(days,self.name()),3)
         return days
     def get_tickle_date(self):
         spp = self.status_part_of_path()
@@ -351,7 +351,7 @@ class Project(WriteableItem):
         self.write()
         new_file_name = u'%s.prj'%u_join(self.path(),name)
         
-        logger.log(u'Renaming to %s'%new_file_name)
+        #logger.log(u'Renaming to %s'%new_file_name)
         os.renames(self.complete_file_path.encode('utf-8'),new_file_name.encode('utf-8'))
         self.complete_file_path = new_file_name
     def process(self):
@@ -498,17 +498,18 @@ class Projects:
 
 
     def process(self):
+        ##logger.log(u'Starting to process')
 
         self.reread()
-        logger.log('Searching for projects without next action')
+        ##logger.log('Searching for projects without next action')
         for project in self.get_active_projects():
-            logger.log(project.name(),2)
+            #logger.log(project.name(),2)
             self.process_project(project)
-        logger.log('Searching for projects that should be untickled')
+        ##logger.log('Searching for projects that should be untickled')
         for project in self.get_current_tickled_projects():
             self.review(project)
             project.activate()
-        logger.log('Removing obsolete tickle directories')
+        ##logger.log('Removing obsolete tickle directories')
         for tickle_dir in self.get_tickle_times():
             if TickleDirectory(tickle_dir).is_obsolete():
                 try:

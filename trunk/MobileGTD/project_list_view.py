@@ -20,12 +20,15 @@ class ProjectListView(EditableListView):
         self.projects = projects
         self.projects.attach(self)
         super(ProjectListView, self).__init__(u'Projects', [projects.get_current_projects,projects.get_all_projects,projects.get_inactive_projects],PROJECT_LIST_KEYS_AND_MENU)
+        #appuifw.note(u'Before starting thread')
         thread.start_new_thread(projects.process,())
+        #appuifw.note(u'After starting thread %s'%repr(projects.observers))
     def exit(self):
         self.exit_flag = True
         self.lock.signal()
         if not in_emulator():
             appuifw.app.set_exit()
+
     def edit_menu(self):
         show_config(PROJECT_LIST_KEYS_AND_MENU)
         PROJECT_LIST_KEYS_AND_MENU.write()
