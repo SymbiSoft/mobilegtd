@@ -1,10 +1,9 @@
-import model, config
+from config.config import *
+from model.projects import Projects
 
 import appuifw
 import thread
-from model import *
-from config import *
-from logging import logger
+from logging.logging import logger
 from e32 import Ao_lock, in_emulator
 from key_codes import *
 import key_codes
