@@ -1,5 +1,7 @@
-import os,re,io,defaultconfig
-from logging import logger
+import os,re
+from defaultconfig import *
+from io import io
+from logging.logging import logger
 configuration_regexp = re.compile('(?P<key>[^:]*):(?P<value>.*)',re.U)
 
 class odict(dict):
@@ -75,7 +77,7 @@ class Configuration(odict):
 
 
 
-COMMON_CONFIG = Configuration(defaultconfig.main_config_file,defaultconfig.default_configuration)
+COMMON_CONFIG = Configuration(main_config_file,default_configuration)
 
 
 
@@ -84,4 +86,4 @@ gtd_directory = COMMON_CONFIG['path']
 inactivity_threshold = int(COMMON_CONFIG['inactivity_threshold'])
 read_sms = int(COMMON_CONFIG['read_sms'])
 project_directory = gtd_directory+'@Projects/'
-ABBREVIATIONS = Configuration(gtd_directory+"abbreviations.cfg",defaultconfig.default_abbreviations)
+ABBREVIATIONS = Configuration(gtd_directory+"abbreviations.cfg",default_abbreviations)
