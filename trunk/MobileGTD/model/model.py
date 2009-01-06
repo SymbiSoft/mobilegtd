@@ -4,12 +4,12 @@ import inout.io
 from inout.io import u_join,write
 
 from time import *
-
+from observable import *
 from log.logging import logger
 from config.config import *
 from inout.io import *
 unprocessed = 0
-processed = 1
+active = 1
 done = 2
 tickled = 3
 inactive = 4
@@ -23,25 +23,17 @@ info = 2
 def invert_dictionary(dictionary):
 	return dict([[v,k] for k,v in dictionary.items()])
 
-sign_status_map = {u'+':done,u'-':processed,u'!':inactive,u'/':tickled,u'':unprocessed,u'~':someday}
+sign_status_map = {u'+':done,u'-':active,u'!':inactive,u'/':tickled,u'':unprocessed,u'~':someday}
 status_sign_map = invert_dictionary(sign_status_map)
-status_string_map = {done:u'Done',processed:u'Processed',inactive:u'Inactive',tickled:u'Tickled',unprocessed:u'Unprocessed'}
+status_string_map = {done:u'Done',active:u'active',inactive:u'Inactive',tickled:u'Tickled',unprocessed:u'Unprocessed'}
 
 
 
 
-class ObservableItem(object):
-	
-	def __init__(self):
-		self.observers = []
-	def __setattr__(self,name,value):
-		#print 'Setting %s to %s'%(name,value)
-		if 'observers' in self.__dict__:
-			for observer in self.observers:
-				observer.notify(self,name,value)
-		super(ObservableItem,self).__setattr__(name,value)
 		
 class ItemWithStatus(object):
+	def __init__(self,status=inactive):
+		self.status = status
 	def status_string(self):
 		status = self.status
 		if status == unprocessed:
@@ -95,7 +87,7 @@ class WriteableItem(ObservableItem):
 # Public API
 __all__= (
 		'unprocessed',
-		'processed',
+		'active',
 		'done',
 		'tickled',
 		'inactive',

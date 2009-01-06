@@ -1,4 +1,0 @@
-This package contains the directory structure necessary to start with MobileGTD.
-If you have a previous installation of this package and modified the configuration make backups as they will be overwritten.
-
-For an explanation of the configuration files see the project wiki at http://code.google.com/p/mobilegtd

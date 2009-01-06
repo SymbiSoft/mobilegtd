@@ -15,3 +15,5 @@ class FileBasedBehaviour(unittest.TestCase):
 		raw=f.read()
 		f.close()
 		return raw
+
+__all__= ["FileBasedBehaviour"]
