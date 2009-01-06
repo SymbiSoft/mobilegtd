@@ -2,7 +2,7 @@ import os
 
 
 def create_dir_if_necessary(path):
-    if not os.path.exists(path):
+    if len(path) > 0 and not os.path.exists(path):
         os.makedirs(path)
 
 def safe_chdir(path):
@@ -18,7 +18,7 @@ def safe_chdir(path):
 def create_file(file_path):
 	dir = os.path.dirname(file_path.encode('utf-8'))
 	create_dir_if_necessary(dir)
-	file_name = u_join(dir,os.path.basename(file_path.encode('utf-8')))
+	file_name = os.path.join(dir,os.path.basename(file_path.encode('utf-8')))
 	
 	f = file(file_name,'w')
 	return f

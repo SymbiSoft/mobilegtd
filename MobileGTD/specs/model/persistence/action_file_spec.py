@@ -16,7 +16,7 @@ class ActionFileBasedBehaviour(file_based_spec.FileBasedBehaviour):
 		self.description = 'some action'
 		self.action = Action(self.description, self.context)
 		self.action_file = model.persistance.action_file.ActionFile(self.action)
-	def file_name(self):
+	def path(self):
 		return os.path.join(self.action.context,self.action.description+'.act')
 
 
@@ -28,22 +28,22 @@ class ProcessedActionFileBehaviour(ActionFileBasedBehaviour):
 
 	def test_should_remove_the_file_when_action_is_set_to_done(self):
 		self.action.status = done
-		assert not os.path.isfile(self.file_name())
+		assert not os.path.isfile(self.path())
 
 	def test_should_remove_the_file_when_action_is_set_to_inactive(self):
 		self.action.status = inactive
-		assert not os.path.isfile(self.file_name())
+		assert not os.path.isfile(self.path())
 
 	def test_should_rename_the_file_when_description_is_changed(self):
 		self.action.description = 'other action'
-		assert os.path.isfile(self.file_name())
+		assert os.path.isfile(self.path())
 
 	def test_should_move_the_file_when_context_is_changed(self):
 		self.action.context = 'other_context'
-		assert os.path.isfile(self.file_name())
+		assert os.path.isfile(self.path())
 
 	def test_should_set_action_to_done_if_file_does_not_exist(self):
-		os.remove(self.file_name())
+		os.remove(self.path())
 		self.action_file.update_done_status()
 		assert self.action.status == done
 
@@ -60,15 +60,15 @@ class UnprocessedActionFileBehaviour(ActionFileBasedBehaviour):
 		
 	def test_should_create_a_file_when_action_is_set_active(self):
 		self.action.status = active
-		assert os.path.isfile(self.file_name())
+		assert os.path.isfile(self.path())
 				
 	def test_should_not_create_the_file_when_description_is_changed(self):
 		self.action.description = 'other action'
-		assert not os.path.isfile(self.file_name())
+		assert not os.path.isfile(self.path())
 
 	def test_should_move_the_file_when_context_is_changed(self):
 		self.action.context = 'other_context'
-		assert not os.path.isfile(self.file_name())
+		assert not os.path.isfile(self.path())
 
 
 

@@ -1,11 +1,10 @@
-import unittest
 from mock import Mock
-#print sys.path
 import file_based_spec
 import model.persistance.project_file
 from model.model import *
-from model.project import Project
+
 import os
+import inout.io
 
 
 class ProjectFileBehaviour(file_based_spec.FileBasedBehaviour):
@@ -14,62 +13,109 @@ class ProjectFileBehaviour(file_based_spec.FileBasedBehaviour):
 		super(ProjectFileBehaviour,self).setUp()
 		self.project = self.create_project()
 		self.project.name = 'some project'
+		self.action1 = Mock()
+		self.action1.project_file_string.return_value = 'first action'
+		self.action2 = Mock()
+		self.action2.project_file_string.return_value = 'second action'
+		self.project.actions = [self.action1,self.action2]
+		self.info = Mock()
+		self.info.file_string.return_value = 'important info'
+		self.project.infos = [self.info]
 		self.project_file = model.persistance.project_file.ProjectFile(self.project)
 
 	def create_project(self):
-		return Mock()
+		project = Mock()
+		try:
+			project.status = self.status()
+		except:
+			pass
+		return project
+
 
 	def test_should_calc_file_name_as_project_name_plus_extension(self):
 		self.assertEqual(self.project_file.file_name(),self.project.name+'.prj')
 
-class ActiveProjectFileBehaviour(ProjectFileBehaviour):
 
-	def create_project(self):
-		project = super(ActiveProjectFileBehaviour,self).create_project()
-		project.status = active
-		return project
+	def path(self):
+		return self.path_in_subdirectory(self.subdir())
+
+	def path_in_subdirectory(self,subdir):
+		project_file_name = self.project.name+'.prj'
+		if subdir and len(subdir) > 0:
+			return os.path.join(subdir,project_file_name)
+		else:
+			return project_file_name
+
+	def create_file(self):
+		inout.io.create_file(self.path()).close()
+
+	def assert_moved_file_to_correct_directory_if_status_changes(self,status,subdir):
+		self.create_file()
+		self.project_file.notify(self.project, 'status', status)
+		self.project.status = status
+		assert os.path.isfile(self.path_in_subdirectory(subdir))
+
+
+
+
+class ExistingProjectFileBehaviour:
+	
+	def test_should_move_file_correctly_to_review_directory(self):
+		self.assert_moved_file_to_correct_directory_if_status_changes(inactive,'@Review')
+
+	def test_should_move_file_correctly_to_active_directory(self):
+		self.assert_moved_file_to_correct_directory_if_status_changes(active,'')
+
+	def test_should_move_file_correctly_to_someday_directory(self):
+		self.assert_moved_file_to_correct_directory_if_status_changes(someday,'@Someday')
+
+	def test_should_rename_file_if_project_name_changes(self):
+		name = 'new name'
+		self.create_file()
+		self.project_file.notify(self.project, 'name', name)
+		self.project.name = name
+		assert os.path.isfile(self.path())
 		
-	def test_should_calc_path_as_project_name_plus_extension(self):
-		self.assertEqual(self.project_file.path(),self.project.name+'.prj')
+	def test_should_calc_path_correctly(self):
+		self.assertEqual(self.project_file.path(),self.path())
 
-
-#	def test_should_move_to_done_folder_when_set_to_done(self):
-#		self.project.status = done
-#		self.project_file
-#		assert not os.path.isfile(self.file_name())
-#
-#	def test_should_remove_the_file_when_action_is_set_to_inactive(self):
-#		self.action.status = inactive
-#		assert not os.path.isfile(self.file_name())
-#
-#	def test_should_rename_the_file_when_description_is_changed(self):
-#		self.action.description = 'other action'
-#		assert os.path.isfile(self.file_name())
-#
-#	def test_should_move_the_file_when_context_is_changed(self):
-#		self.action.context = 'other_context'
-#		assert os.path.isfile(self.file_name())
-#
-#	def test_should_set_action_to_done_if_file_does_not_exist(self):
-#		os.remove(self.file_name())
-#		self.action_file.update_done_status()
-#		assert self.action.status == done
-#
-#	def test_should_write_the_action_description_in_file(self):
-#		content = self.file_content()
-#		assert len(content) > 0
+	def test_should_write_the_project_description_in_file(self):
+#		pass
+		self.project_file.write()
+		content = self.file_content()
+		assert len(content) > 0
+		assert self.info.file_string() in content
+		assert self.action1.project_file_string() in content
+		assert self.action2.project_file_string() in content
 #		assert content == '%s %s'%(self.context,self.description)
-class InactiveProjectFileBehaviour(ProjectFileBehaviour):
 
-	def create_project(self):
-		project = super(InactiveProjectFileBehaviour,self).create_project()
-		project.status = inactive
-		return project
+
+class ActiveProjectFileBehaviour(ProjectFileBehaviour,ExistingProjectFileBehaviour):
+
+	def status(self):
+		return active
+
+	def subdir(self):
+		return ''
+
 		
-	def test_should_calc_path_as_review_folder_plus_project_name(self):
-		self.assertEqual(self.project_file.path(),os.path.join('@Review',self.project.name+'.prj'))
 
 
+class SomedayProjectFileBehaviour(ProjectFileBehaviour,ExistingProjectFileBehaviour):
+
+	def status(self):
+		return someday
+
+	def subdir(self):
+		return '@Someday'		
+
+
+class InactiveProjectFileBehaviour(ProjectFileBehaviour,ExistingProjectFileBehaviour):
+	def status(self):
+		return inactive
+		
+	def subdir(self):
+		return '@Review'
 
 
 if __name__ == '__main__':
