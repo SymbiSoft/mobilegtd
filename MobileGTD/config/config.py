@@ -1,7 +1,7 @@
 import os,re
 from defaultconfig import *
-from io import io
-from logging.logging import logger
+from inout import io
+from log.logging import logger
 configuration_regexp = re.compile('(?P<key>[^:]*):(?P<value>.*)',re.U)
 
 class odict(dict):
@@ -41,8 +41,9 @@ class Configuration(odict):
             self.write()
             self.read()
     def read(self):
-        if not os.path.isfile(self.file_path.encode('utf-8')):
-            logger.log(u'Configuration file %s does not exist'%self.file_path)
+        encoded_path = self.file_path.encode('utf-8')
+        if not os.path.isfile(encoded_path):
+            logger.log(u'Configuration file %s does not exist'%os.path.abspath(encoded_path))
             return
         for line in io.parse_file_to_line_list(self.file_path):
             if len(line)<1:continue
@@ -85,5 +86,5 @@ COMMON_CONFIG = Configuration(main_config_file,default_configuration)
 gtd_directory = COMMON_CONFIG['path']
 inactivity_threshold = int(COMMON_CONFIG['inactivity_threshold'])
 read_sms = int(COMMON_CONFIG['read_sms'])
-project_directory = gtd_directory+'@Projects/'
-ABBREVIATIONS = Configuration(gtd_directory+"abbreviations.cfg",default_abbreviations)
+
+__all__=["Configuration","read_sms","inactivity_threshold","COMMON_CONFIG"]

@@ -1,13 +1,13 @@
 import os
-from io import io
+from inout import io
 
 class FileLogger:
     def __init__(self,file_path=u'C:/mobile_gtd.log',log_level = 8):
         self.entries = []
         self.file_path = file_path
         self.log_level = log_level
-        io.write(file_path,u'')
         #self.log_file = file(file_path.encode('utf-8'),'w')
+        io.create_file(file_path).close
         self.log_file = file(self.file_path,'a')
     def log_stderr(self):
         import sys
@@ -49,6 +49,7 @@ class NullLogger:
         pass
         
 #logger=FileLogger(gtd_directory+'gtd.log')
-#logger=NullLogger()
-logger=FileLogger()
+# Need NullLogger during initialization of FileLogger
+logger=NullLogger()
+#logger=FileLogger()
 #logger=ConsoleLogger()

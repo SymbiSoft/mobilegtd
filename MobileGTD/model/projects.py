@@ -1,5 +1,12 @@
 from project import Project
+from tickler import TickleDirectory
+from inout.io import *
 
+project_directory = '@Projects/'
+
+
+def make_string_stripper(to_strip):
+    return lambda x: x.replace(to_strip,'')
 
 class Projects:
     def __init__(self,project_directory):
@@ -43,16 +50,16 @@ class Projects:
         
     def get_tickle_times(self):
         if self.tickle_times == None:
-                self.tickle_times=map(make_string_stripper(self.tickled_directory+'/'),io.list_dir(self.tickled_directory,True,io.is_dir))
+                self.tickle_times=map(make_string_stripper(self.tickled_directory+'/'),list_dir(self.tickled_directory,True,is_dir))
         return self.tickle_times
     def get_someday_contexts(self):
         if self.someday_contexts == None:
-            self.someday_contexts=map(make_string_stripper(self.someday_directory+'/'),io.list_dir(self.someday_directory,True,io.is_dir))
+            self.someday_contexts=map(make_string_stripper(self.someday_directory+'/'),list_dir(self.someday_directory,True,is_dir))
         return self.someday_contexts
         #self.notify()
     def read(self,root,recursive=False):
-        # TODO Use generic read function
-        return [Project(project_name) for project_name in io.list_dir(root, recursive, lambda name: name.endswith('.prj'))]
+        # TODO Use generic read funct
+        return [Project(project_name) for project_name in list_dir(root, recursive, lambda name: name.endswith('.prj'))]
     def get_all_projects(self):
         return self.get_active_projects() + self.get_review_projects() + \
             self.get_tickled_projects() + self.get_someday_projects()
@@ -101,7 +108,7 @@ class Projects:
         ##logger.log(u'Starting to process')
 
         self.reread()
-        ##logger.log('Searching for projects without next action')
+        ##logger.log('Searching for projects without next act')
         for project in self.get_active_projects():
             #logger.log(project.name(),2)
             self.process_project(project)
@@ -128,7 +135,7 @@ class Projects:
     def update_status(self,project):
         if project.has_active_actions() and project.get_status()==inactive:
             self.activate(project)
-        elif not project.has_active_actions() and project.get_status() == processed:
+        elif not project.has_active_actions() and project.is_processed():
             self.review(project)
     
     def review(self,project):
@@ -145,3 +152,5 @@ class Projects:
     def tickle(self,project,time=''):
         project.inactivate()
         project.move_to(u'%s/%s'%(self.tickled_directory,time))
+
+__all__ = ["Projects"]

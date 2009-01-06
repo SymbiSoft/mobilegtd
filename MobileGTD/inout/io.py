@@ -1,5 +1,10 @@
 import os
 
+
+def create_dir_if_necessary(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+
 def safe_chdir(path):
     #try:
     #    path = path_unicode.encode('utf-8')
@@ -7,15 +12,24 @@ def safe_chdir(path):
     #    #logger.log('Error decoding path %s'%repr(path_unicode))
     #    print 'Error decoding path %s'%repr(path_unicode)
     #    path = path_unicode
-    if not os.path.exists(path):
-        os.makedirs(path)
+    create_dir_if_necessary(path)
     os.chdir(path)
 
+def create_file(file_path):
+	dir = os.path.dirname(file_path.encode('utf-8'))
+	create_dir_if_necessary(dir)
+	file_name = u_join(dir,os.path.basename(file_path.encode('utf-8')))
+	
+	f = file(file_name,'w')
+	return f
+
+
 def write(file_path,content):
-        safe_chdir(os.path.dirname(file_path.encode('utf-8')))
-        f = file(os.path.basename(file_path.encode('utf-8')),'w')
-        f.write(content.encode('utf-8'))
-        f.close()
+    f = create_file(file_path)
+    f.write(content.encode('utf-8'))
+    f.close()
+    from log.logging import logger
+    logger.log(u'Wrote %s to %s'%(content,os.path.abspath(file_path)))    
 
 def list_dir(root,recursive=False,filter=None):
     if not os.path.exists(root.encode('utf-8')):
@@ -59,7 +73,10 @@ def u_join(father,son):
 
 
 def read_text_from_file(unicode_file_name):
-    f=file(unicode_file_name.encode('utf-8'),'r')
+    from log.logging import logger
+    file_name = unicode_file_name.encode('utf-8')
+    logger.log("Reading from %s"%os.path.abspath(file_name))
+    f=file(file_name,'r')
     raw=f.read()
     f.close()
     (text,encoding)=guess_encoding(raw)

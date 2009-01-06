@@ -1,16 +1,24 @@
 import model, config, gui
 import appuifw
 import thread
-from model import *
-from config import *
-from logging import logger
+from model.model import *
+from config.config import *
+from config.defaultconfig import default_actions_menu
+from gui.gui import EditableListView
+from infos_widget import InfosWidget
+from info_widget import InfoWidget
+from context_widget import ContextWidget
+from action_widget import ActionWidget
+from action_view import ActionView
+from model.action import Action
+from log.logging import logger
 from e32 import Ao_lock, in_emulator
 from key_codes import *
 import key_codes
 
 from gui import *
 
-ACTION_LIST_KEYS_AND_MENU = config.Configuration(gtd_directory+"actions.cfg",defaultconfig.default_actions_menu)
+ACTION_LIST_KEYS_AND_MENU = Configuration("actions.cfg")
 
 
 def ask_for_action(project_name,proposition=None):

@@ -1,9 +1,11 @@
+import appuifw #Only temporary
 class ProjectWidget:
     def __init__(self,projects,project):
         self.project = project
         self.projects = projects
     def change(self):
-        from project_view import ProjectView
+        appuifw.note(u'Opening')
+        from gui.project_details.project_view import ProjectView
         edit_view = ProjectView(self.project, self.projects)
         edit_view.run()
 

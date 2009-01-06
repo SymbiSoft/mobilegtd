@@ -5,12 +5,14 @@ import appuifw,thread,re
 from model import *
 from config.config import gtd_directory,read_sms
 from config.defaultconfig import default_projects_menu
-from logging.logging import logger
+from log.logging import logger
 from e32 import Ao_lock, in_emulator
 from key_codes import *
 import key_codes
 from new_project_widget import NewProjectWidget
 from new_action_widget import NewActionWidget
+from project_widget import ProjectWidget
+
 #from gui import *
 
 
@@ -50,10 +52,12 @@ class ProjectListView(EditableListView):
         widgets = []
         widgets.append(NewProjectWidget(self.projects))
         widgets.append(NewActionWidget())
-        widgets.extend([ProjectWidget(self.projects,project) for project in self.filtered_list()])
+        self.filtered_list()
+#        widgets.extend([ProjectWidget(self.projects,project) for project in self.filtered_list()])
         if read_sms:
+            from sms_widget import create_sms_widgets
             try:
-                widgets.extend([SMSWidget(sms_id,self.projects) for sms_id in INBOX.sms_messages()])
+                widgets.extend(create_sms_widgets())
             except Exception,e:
                 logger.log(u'No permission to access SMS inbox')
                 logger.log(unicode(repr(e.args)))
