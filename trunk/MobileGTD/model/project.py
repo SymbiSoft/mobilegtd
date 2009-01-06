@@ -5,10 +5,6 @@ from inout.io import parse_file_to_line_list,u_join
 import os,re
 from observable import *
 
-file_name_regexp = re.compile('/?(?P<path>.*/)*(?P<file_name>.*)\....',re.U)
-
-project_dir_status_map = {u'Done':done,u'Review':inactive,u'Someday':someday,u'Tickled':tickled}
-status_project_dir_map = invert_dictionary(project_dir_status_map)
 
 def parse_lines(lines):
     actions = []
@@ -85,14 +81,6 @@ class Project(ObservableItem,ItemWithStatus):
 #            for action in self.actions:
 #                action.project = self.name()
 #
-#    def file_string(self):
-#        lines = []
-#        for info in self.get_infos():
-#            lines.append(info.file_string())
-#        self.sort_actions()
-#        for action in self.get_actions():
-#            lines.append(action.project_file_string())
-#        return u'\n'.join(lines) 
 #
 #    def write(self):
 #        if self.dirty:

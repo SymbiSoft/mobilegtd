@@ -49,7 +49,6 @@ class WriteableItem(ObservableItem):
 	def write(self):
 		write(self.path(),self.file_string())
 	def move_to(self,directory):
-		self.write()
 		new_file_name = os.path.join(directory,self.file_name())
 		old_file_name = self.path()
 		try:
@@ -75,7 +74,6 @@ class WriteableItem(ObservableItem):
 		return self.path().encode('utf-8')
 
 	def rename(self,new_name):
-		self.write()
 		extension = os.path.splitext(self.encoded_path())[1]
 		new_file_name = os.path.join(self.directory(),new_name+extension)
 		

@@ -11,7 +11,7 @@ class FileBasedBehaviour(unittest.TestCase):
 		shutil.rmtree(self.tempdir,True)
 
 	def file_content(self):
-		f=file(self.file_name(),'r')
+		f=file(self.path(),'r')
 		raw=f.read()
 		f.close()
 		return raw
