@@ -3,7 +3,7 @@ from model.projects import Projects
 
 import appuifw
 import thread
-from logging.logging import logger
+from log.logging import logger
 from e32 import Ao_lock, in_emulator
 from key_codes import *
 import key_codes
@@ -102,25 +102,15 @@ def restore_gui(object):
     appuifw.app.title = object.old_title
 
 
-class SearchableListView(object):
-    def __init__(self,title,entry_filters,binding_map):
+class ListView(object):
+    def __init__(self,title):
         self.title = title
-        self.exit_flag = False
-        self.binding_map = binding_map
-        self.current_entry_filter_index = 0
-        self.entry_filters = entry_filters
-        self.filtered_list = self.entry_filters[0]
-        self.widgets = self.generate_widgets()
-        self.lock = None
-        self.view = appuifw.Listbox(self.all_widget_entries(),self.change_entry)
-
+    
     def run(self):
         self.adjustment = None
         appuifw.app.screen=COMMON_CONFIG['screen'].encode('utf-8')
         save_gui(self)
         appuifw.app.title=self.title
-        self.refresh()
-        self.set_bindings_for_selection(0)
         appuifw.app.body=self.view
         appuifw.app.exit_key_handler=self.exit
         try:
@@ -140,6 +130,34 @@ class SearchableListView(object):
         if self.lock:
             self.lock.signal()
         #pass
+
+    def index_changed(self,adjustment=None):
+        if adjustment:
+            index = self.selected_index() + adjustment
+        else:
+            index = self.selected_index()
+        if index < 0:
+            index = len(self.widgets) - 1
+        if index >= len(self.widgets):
+            index = 0
+        self.set_bindings_for_selection(index)
+
+    def refresh(self):
+        appuifw.app.menu=self.get_menu_entries()
+
+
+class WidgetBasedListView(ListView):
+    def __init__(self,title):
+        self.title = title
+        self.exit_flag = False
+        self.widgets = self.generate_widgets()
+        self.view = appuifw.Listbox(self.all_widget_entries(),self.change_entry)
+
+    def run(self):
+        self.refresh()
+        self.set_bindings_for_selection(0)
+        ListView.run(self)
+
     def refresh(self):
         self.widgets = self.generate_widgets()
         self.redisplay_widgets()
@@ -153,39 +171,51 @@ class SearchableListView(object):
         return self.all_widget_texts()
     def all_widget_texts(self):
         return [entry.list_repr() for entry in self.widgets]
-    def remove_all_key_bindings(self):
-        for key in all_key_values():
-            self.view.bind(key,no_action)
-    def set_bindings_for_selection(self,selected_index):
-        self.remove_all_key_bindings()
+
+    def selected_index(self):
+        return self.view.current()
+    
+
+    def current_widget(self):
+        return self.widgets[self.selected_index()]
+        
+
+class KeyBindingView(object):
+    
+    def __init__(self,binding_map):
+        self.binding_map = binding_map
+
+    def get_menu_entries(self):
         menu_entries=[]
         for key,key_name,description,function in self.key_and_menu_bindings(selected_index):
-            if key:
-                self.view.bind(key,function)
             if description != '':
                 if key:
                     if key_name == 'Backspace': key_name='C'
                     description='[%s] '%key_name +description
                 else:
                     description='    '+description
-                menu_entries.append((description,function))
+                menu_entries.append((description,function)) 
+        menu_entries.append((u'Exit', self.exit))
+        return menu_entries       
+    def set_bindings_for_selection(self,selected_index):
+        self.remove_all_key_bindings()
+        
+        for key,key_name,description,function in self.key_and_menu_bindings(selected_index):
+            if key:
+                self.view.bind(key,function)
         self.view.bind(EKeyUpArrow,lambda: self.index_changed(-1))
         self.view.bind(EKeyDownArrow,lambda: self.index_changed(1))
-        menu_entries.append((u'Exit', self.exit))
-        appuifw.app.menu=menu_entries
+        
+    def remove_all_key_bindings(self):
+        for key in all_key_values():
+            self.view.bind(key,no_action)
 
-    def selected_index(self):
-        return self.view.current()
-    def index_changed(self,adjustment=None):
-        if adjustment:
-            index = self.selected_index() + adjustment
-        else:
-            index = self.selected_index()
-        if index < 0:
-            index = len(self.widgets) - 1
-        if index >= len(self.widgets):
-            index = 0
-        self.set_bindings_for_selection(index)
+class SearchableListView(object):
+    def __init__(self,entry_filters):
+        self.current_entry_filter_index = 0
+        self.entry_filters = entry_filters
+        self.filtered_list = self.entry_filters[0]
+        self.lock = None
 
 
     def search_item(self):
@@ -194,17 +224,16 @@ class SearchableListView(object):
             selected_item = self.selected_index()
         self.view.set_list(self.all_widget_entries(),selected_item)
         self.set_bindings_for_selection(selected_item)
-    def current_widget(self):
-        return self.widgets[self.selected_index()]
     def switch_entry_filter(self):
         self.current_entry_filter_index += 1
         self.filtered_list = self.entry_filters[self.current_entry_filter_index % len(self.entry_filters)]
         self.refresh()
 
 
-class EditableListView(SearchableListView):
+class EditableListView(SearchableListView,KeyBindingView):
     def __init__(self,title,entry_filters,binding_map):
-        super(EditableListView, self).__init__(title,entry_filters,binding_map)
+        super(KeyBindingView, self).__init__(title,binding_map)
+        super(EditableListView, self).__init__(entry_filters)
 
     def key_and_menu_bindings(self,selected_index):
         key_and_menu_bindings=[]
@@ -223,14 +252,14 @@ class EditableListView(SearchableListView):
 
 
 
-class DisplayableFunction:
-    def __init__(self,display_name,function):
-        self.display_name = display_name
-        self.function = function
-    def list_repr(self):
-        return self.display_name
-    def execute(self):
-        function()
+#class DisplayableFunction:
+#    def __init__(self,display_name,function):
+#        self.display_name = display_name
+#        self.function = function
+#    def list_repr(self):
+#        return self.display_name
+#    def execute(self):
+#        function()
 
 # Public API
 __all__= ('EditableListView','show_config')

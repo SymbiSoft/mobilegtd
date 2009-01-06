@@ -1,1 +1,1 @@
-__all__ = ["gui","project_list_view","project_view"]
+__all__ = ["gui"]

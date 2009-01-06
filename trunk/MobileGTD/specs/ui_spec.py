@@ -1,6 +1,6 @@
 from pyspec import *
 
-class verifyUserSpecification( object ):
+class VerifyUserSpecification( object ):
 	@context
 	def setUp( self ):
 		self.user = User( "Mark Dancer" )

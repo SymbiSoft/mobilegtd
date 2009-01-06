@@ -1,3 +1,6 @@
+from log.logging import logger
+from model.action import *
+import appuifw
 class ActionView( object ):
     
     def __init__( self, action):

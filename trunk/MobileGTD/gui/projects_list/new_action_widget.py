@@ -1,6 +1,7 @@
+
 class NewActionWidget:
     def change(self):
-        from project_view import ask_for_action
+        from gui.project_details.project_view import ask_for_action
         action = ask_for_action(u"No project")
         if action:
             action.process()

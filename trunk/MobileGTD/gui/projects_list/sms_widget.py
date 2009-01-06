@@ -1,6 +1,8 @@
 from inbox import EInbox,Inbox
 INBOX = Inbox(EInbox)
 
+def create_sms_widgets():
+    return [SMSWidget(sms_id,self.projects) for sms_id in INBOX.sms_messages()]
 
 class SMSWidget:
     def __init__(self,sms_id,projects):
