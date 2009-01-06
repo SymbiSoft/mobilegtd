@@ -50,7 +50,7 @@ class ActionParseBehaviour(unittest.TestCase):
 		assert self.action.context == self.context
 
 	def test_should_read_the_status_correctly(self):
-		assert self.action.status == processed
+		assert self.action.status == active
 
 	def test_should_read_the_info_correctly(self):
 		assert self.action.info == self.info

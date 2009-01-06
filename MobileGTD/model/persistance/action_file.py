@@ -14,20 +14,20 @@ class ActionFile(WriteableItem):
 			self.update_methods[attribute](value)
 			
 	def update_description(self,value):
-		if self.action.status == processed:
+		if self.action.status == active:
 			self.rename(value)
 			
 	def update_status(self,value):
-		if value == processed:
+		if value == active:
 			self.write()
 		elif value == inactive or value == done:
 			self.remove()
 		
 	def set_context(self,context):
-		if self.action.status == processed:
+		if self.action.status == active:
 			self.move_to(context)
 	def update_done_status(self):
-		if self.action.status == processed and not self.exists():
+		if self.action.status == active and not self.exists():
 			self.action.status = done
 			
 	def path(self):

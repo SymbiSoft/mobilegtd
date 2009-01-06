@@ -23,7 +23,7 @@ class ActionWidget:
         
         if self.action.is_reviewable():
             self.action.process()
-        elif self.action.status == processed:
+        elif self.action.status == active:
             self.action.done()
         elif self.action.status == done:
             self.action.deactivate()

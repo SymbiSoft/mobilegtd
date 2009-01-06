@@ -48,13 +48,13 @@ class Action(ObservableItem,ItemWithStatus):
         self.status = status
         
     def is_active(self):
-        return self.status in [processed,unprocessed]
+        return self.status in [active,unprocessed]
     
     def is_reviewable(self):
         return self.status in [unprocessed,inactive]
     
     def is_not_done(self):
-        return self.status in [processed,unprocessed,inactive]
+        return self.status in [active,unprocessed,inactive]
         
     def __repr__(self):
         advanced_info = ''

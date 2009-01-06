@@ -24,7 +24,7 @@ class ProcessedActionFileBehaviour(ActionFileBasedBehaviour):
 
 	def setUp(self):
 		super(ProcessedActionFileBehaviour,self).setUp()
-		self.action.status = processed
+		self.action.status = active
 
 	def test_should_remove_the_file_when_action_is_set_to_done(self):
 		self.action.status = done
@@ -59,7 +59,7 @@ class UnprocessedActionFileBehaviour(ActionFileBasedBehaviour):
 		self.action.status = unprocessed
 		
 	def test_should_create_a_file_when_action_is_set_active(self):
-		self.action.status = processed
+		self.action.status = active
 		assert os.path.isfile(self.file_name())
 				
 	def test_should_not_create_the_file_when_description_is_changed(self):
