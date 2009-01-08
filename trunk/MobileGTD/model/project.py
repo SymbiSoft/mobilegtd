@@ -27,23 +27,30 @@ class Project(ObservableItem,ItemWithStatus):
         self.name=name
         self.actions=[]
         self.infos=[]
-        
+        self.update_methods = {'status':self.action_changed_status,
+                               'description':self.action_changed_content}
+
+
     def add_action(self,action):
         action.observers.append(self)
         self.actions.append(action)
-        if action.status == active:
-            self.status = active
-        self.update_status()
+        self.notify_observers('add_action',action)
+
         
     def remove_action(self,action):
+        action.status = done
         action.observers.remove(self)
         self.actions.remove(action)
+        self.notify_observers('remove_action',action)
+        self.update_status()
         
 
     def update_status(self):
-        for action in self.actions:
-            if action.status == active:
-                self.status = active
+        if len(self.actions_with_status(active)) == 0:
+            self.status = inactive
+        else:
+            self.status = active
+        
 
     def actions_with_status(self,status):
         result = []
@@ -54,7 +61,14 @@ class Project(ObservableItem,ItemWithStatus):
         
 
     def notify(self,action,attribute,value):
-        if value == active:
+        self.update_methods[attribute](action,value)
+    
+    def action_changed_content(self,action,content):
+        self.notify_observers('changed_action',action)
+        
+    
+    def action_changed_status(self,action,status):
+        if status == active:
             self.status = active
         else:
             active_actions = self.actions_with_status(active)
@@ -62,6 +76,7 @@ class Project(ObservableItem,ItemWithStatus):
                 active_actions.remove(action)
             if  len(active_actions) == 0:
                 self.status = inactive
+        
         
 #        self.dirty = False
 #        super(Project, self).__init__()

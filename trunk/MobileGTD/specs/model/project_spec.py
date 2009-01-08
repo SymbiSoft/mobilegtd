@@ -24,6 +24,13 @@ class ProjectBehaviour(unittest.TestCase):
         self.project.status = done
         self.assert_status(done)
 
+    def test_should_notify_observer_of_added_actions(self):
+        action = Mock()
+        action.status = done
+        self.project.add_action(action)
+        calls = self.observer.notify.call_args_list
+        self.assertTrue(((self.project,'add_action',action),{}) in calls)
+
     def assert_status(self,status):
         self.assertEqual(self.project.status,status)
         self.observer.notify.assert_called_with(self.project,'status',status)
@@ -63,20 +70,40 @@ class ProjectWithActionsBehaviour(ProjectBehaviour):
         self.project.add_action(self.action)
 #        self.project.actions.add
 
+    def create_action(self):
+        action = Mock()
+        try:
+            action.status = self.action_status()
+        except:
+            pass
+        return action
+
     def test_should_remove_itself_as_observer_for_removed_actions(self):
         self.project.remove_action(self.action)
         self.action.observers.remove.assert_called_with(self.project)
 
-    def create_action(self):
-        return Mock()
+    def test_should_set_action_to_done_before_removing(self):
+        self.project.remove_action(self.action)
+        assert self.action.status == done
 
+    def test_should_notify_observer_of_removed_actions(self):
+        self.project.remove_action(self.action)
+        calls = self.observer.notify.call_args_list
+        self.assertTrue(((self.project,'remove_action',self.action),{}) in calls)
+
+    def test_should_become_inactive_if_no_active_action_remains(self):
+        self.project.remove_action(self.action)
+        self.assertNotEqual(self.project.status,active)
+
+    def test_should_notify_observer_of_changes_in_actions_or_infos(self):
+        self.project.notify(self.action, 'description', 'new description')
+        self.observer.notify.assert_called_with(self.project,'changed_action',self.action)
+        
 
 class ProjectWithInactiveActionsBehaviour(ProjectWithActionsBehaviour,InactiveProjectBehaviour):
 
-    def create_action(self):
-        action = Mock()
-        action.status = inactive
-        return action
+    def action_status(self):
+        return inactive
 
     def test_should_become_active_when_inactive_actions_become_active(self):
         self.action.status = active
@@ -89,14 +116,13 @@ class ProjectWithInactiveActionsBehaviour(ProjectWithActionsBehaviour,InactivePr
     def test_should_return_no_active_action(self):
         self.assertEqual(self.project.actions_with_status(active),[])
 
-class ProjectWithActiveActionsBehaviour(ProjectWithActionsBehaviour,ActiveProjectBehaviour):
-
-    def create_action(self):
-        action = Mock()
-        action.status = active
-        return action
+class ProjectWithActiveActionsBehaviour(ProjectWithActionsBehaviour):
+    
+    def action_status(self):
+        return active
 
     def test_should_become_inactive_when_active_actions_become_inactive(self):
+        self.project.status = active
         self.action.status = done
         self.project.notify(self.action,'status',done)
         self.assert_status(inactive)
