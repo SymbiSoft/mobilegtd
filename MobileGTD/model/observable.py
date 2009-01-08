@@ -5,11 +5,13 @@ class ObservableItem(object):
         self.observers = []
     def __setattr__(self,name,value):
         #print 'Setting %s to %s'%(name,value)
+        self.notify_observers(name, value)
+        super(ObservableItem,self).__setattr__(name,value)
+
+    def notify_observers(self,name,value):
         if 'observers' in self.__dict__:
             for observer in self.observers:
                 observer.notify(self,name,value)
-        super(ObservableItem,self).__setattr__(name,value)
-
 
 
 
