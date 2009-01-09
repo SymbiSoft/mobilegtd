@@ -8,13 +8,13 @@ from observable import *
 from log.logging import logger
 from config.config import *
 from inout.io import *
-unprocessed = 0
-active = 1
-done = 2
-tickled = 3
-inactive = 4
-someday = 5
-info = 2
+unprocessed = ('unprocessed',0)
+active = ('active',1)
+done = ('done',2)
+tickled = ('tickled',3)
+inactive = ('inactive',4)
+someday = ('someday',5)
+info = ('info',0)
 #logger.log(u'new version')
 
 
@@ -41,7 +41,7 @@ class ItemWithStatus(object):
 		else:
 			return u'%s '%status_sign_map[status]
 	def __cmp__(self,other):
-		return other.status - self.status
+		return other.status[1] - self.status[1]
 
 class WriteableItem(ObservableItem):
 	def __init__(self):

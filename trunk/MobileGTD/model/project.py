@@ -1,9 +1,52 @@
 from action import Action
 from info import Info
-from model import *
+from model import ItemWithStatus
 from inout.io import parse_file_to_line_list,u_join
 import os,re
 from observable import *
+
+
+class Status(object):
+    def __init__(self,name,value):
+        self.name = name
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.name
+
+    def update(self,project):
+        return self
+
+class Inactive(Status):
+    def __init__(self):
+        super(Inactive,self).__init__('inactive',4)
+
+    def update(self,project):
+        if len(project.actions_with_status(active)) > 0:
+            return active
+        return self
+
+class Active(Status):
+    def __init__(self):
+        super(Active,self).__init__('active',1)
+    def update(self,project):
+        if len(project.actions_with_status(active)) == 0:
+            return inactive
+        return self
+
+
+
+
+
+unprocessed = Status('unprocessed',0)
+active = Active()
+done = Status('done',2)
+tickled = Status('tickled',3)
+inactive = Inactive()
+someday = Status('someday',5)
+info = Status('info',0)
 
 
 def parse_lines(lines):
@@ -21,24 +64,26 @@ def parse_lines(lines):
 
 
 
-class Project(ObservableItem,ItemWithStatus):
-    def __init__(self,name):
-        super(Project,self).__init__()
-        ItemWithStatus.__init__(self)
+class Project(ObservableItem):
+    
+    def __init__(self,name,status = inactive,actions=[],infos=[]):
+        self.status = status
         self.name=name
-        self.actions=[]
-        self.infos=[]
+        self.actions=actions
+        self.infos=infos
         self.update_methods = {'status':self.action_changed_status,
                                'description':self.action_changed_content,
                                'info':self.action_changed_content,
                                'context':self.action_changed_content,
                                'text':self.info_changed}
+        super(Project,self).__init__()
 
 
     def add_action(self,action):
         action.observers.append(self)
         self.actions.append(action)
         self.notify_observers('add_action',action)
+        self.update_status()
         
     def remove_action(self,action):
         action.status = done
@@ -57,13 +102,6 @@ class Project(ObservableItem,ItemWithStatus):
         self.infos.remove(info)
         self.notify_observers('remove_info', info)
 
-    def update_status(self):
-        if len(self.actions_with_status(active)) == 0:
-            self.status = inactive
-        else:
-            self.status = active
-        
-
     def actions_with_status(self,status):
         result = []
         for action in self.actions:
@@ -71,31 +109,26 @@ class Project(ObservableItem,ItemWithStatus):
                 result.append(action)
         return result
         
+    def notify(self,action,attribute,new_value,old_value=None):
+        self.update_methods[attribute](action,new_value)
+    
     def info_changed(self,info,text):
         self.notify_observers('changed_info', info)
 
-    def notify(self,action,attribute,value):
-        self.update_methods[attribute](action,value)
-    
     def action_changed_content(self,action,content):
         self.notify_observers('changed_action',action)
         
+    def update_status(self):
+        self.status = self.status.update(self)
     
     def action_changed_status(self,action,status):
-        if status == active:
-            self.status = active
-        else:
-            active_actions = self.actions_with_status(active)
-            if action in active_actions:
-                active_actions.remove(action)
-            if  len(active_actions) == 0:
-                self.status = inactive
+        self.update_status()
         
         
-#    def __eq__(self, project):
-#        return self.path == project.path
-#    def __ne__(self,project):
-#        return not self.__eq__(project)
+    def __eq__(self, other):
+        return self.name == other.name and self.status == other.status
+    def __ne__(self,project):
+        return not self.__eq__(project)
 #    def read(self):
 #        if not self.exists():
 #            self.actions=[]
