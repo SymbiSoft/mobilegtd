@@ -94,7 +94,7 @@ class ExistingProjectFileBehaviour:
 		assert self.info.file_string() in content
 		assert self.action1.project_file_string() in content
 		assert self.action2.project_file_string() in content
-#		assert content == '%s %s'%(self.context,self.description)
+
 
 
 class ActiveProjectFileBehaviour(ProjectFileBehaviour,ExistingProjectFileBehaviour):
