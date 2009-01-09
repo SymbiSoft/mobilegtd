@@ -20,6 +20,7 @@ def parse_lines(lines):
 
 
 
+
 class Project(ObservableItem,ItemWithStatus):
     def __init__(self,name):
         super(Project,self).__init__()
@@ -28,14 +29,16 @@ class Project(ObservableItem,ItemWithStatus):
         self.actions=[]
         self.infos=[]
         self.update_methods = {'status':self.action_changed_status,
-                               'description':self.action_changed_content}
+                               'description':self.action_changed_content,
+                               'info':self.action_changed_content,
+                               'context':self.action_changed_content,
+                               'text':self.info_changed}
 
 
     def add_action(self,action):
         action.observers.append(self)
         self.actions.append(action)
         self.notify_observers('add_action',action)
-
         
     def remove_action(self,action):
         action.status = done
@@ -43,7 +46,16 @@ class Project(ObservableItem,ItemWithStatus):
         self.actions.remove(action)
         self.notify_observers('remove_action',action)
         self.update_status()
-        
+
+    def add_info(self,info):
+        info.observers.append(self)
+        self.infos.append(info)
+        self.notify_observers('add_info', info)
+
+    def remove_info(self,info):
+        info.observers.remove(self)
+        self.infos.remove(info)
+        self.notify_observers('remove_info', info)
 
     def update_status(self):
         if len(self.actions_with_status(active)) == 0:
@@ -59,6 +71,8 @@ class Project(ObservableItem,ItemWithStatus):
                 result.append(action)
         return result
         
+    def info_changed(self,info,text):
+        self.notify_observers('changed_info', info)
 
     def notify(self,action,attribute,value):
         self.update_methods[attribute](action,value)
@@ -78,10 +92,6 @@ class Project(ObservableItem,ItemWithStatus):
                 self.status = inactive
         
         
-#        self.dirty = False
-#        super(Project, self).__init__()
-#        ##logger.log(u'Project %s is %s'%(self.name(),self.status))
-#        #self.read()
 #    def __eq__(self, project):
 #        return self.path == project.path
 #    def __ne__(self,project):
