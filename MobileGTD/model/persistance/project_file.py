@@ -31,8 +31,11 @@ class ProjectFile(WriteableItem):
     def notify(self,project,attribute,value):
         if attribute == 'status':
             self.move_to(self.directory_for_status(value))
-        else:
+        elif attribute == 'name':
             self.rename(value)
+        else:
+            self.write()
+    
     def file_string(self):
         lines = []
         for info in self.project.infos:

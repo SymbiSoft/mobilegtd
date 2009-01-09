@@ -55,12 +55,6 @@ class EmptyProjectBehaviour(ProjectBehaviour,InactiveProjectBehaviour):
     def test_should_return_an_empty_list_of_infos(self):
         self.assertEqual(self.project.infos,[])
 
-    def test_should_register_itself_as_observer_for_added_actions(self):
-        action = Mock()
-        self.project.add_action(action)
-        action.observers.append.assert_called_with(self.project)
-
-
 
 class ProjectWithActionsBehaviour(ProjectBehaviour):
     
@@ -77,6 +71,17 @@ class ProjectWithActionsBehaviour(ProjectBehaviour):
         except:
             pass
         return action
+
+    def test_should_contain_all_added_actions(self):
+        self.assertEqual(self.project.actions,[self.action])
+
+    def test_should_forget_removed_actions(self):
+        self.project.remove_action(self.action)
+        self.assertFalse(self.action in self.project.actions)
+    
+    def test_should_register_itself_as_observer_for_added_actions(self):
+        self.action.observers.append.assert_called_with(self.project)
+
 
     def test_should_remove_itself_as_observer_for_removed_actions(self):
         self.project.remove_action(self.action)
@@ -95,9 +100,16 @@ class ProjectWithActionsBehaviour(ProjectBehaviour):
         self.project.remove_action(self.action)
         self.assertNotEqual(self.project.status,active)
 
-    def test_should_notify_observer_of_changes_in_actions_or_infos(self):
-        self.project.notify(self.action, 'description', 'new description')
+def test_generator(field):
+    def test_should_notify_observer_of_changes_in_actions(self):
+        self.project.notify(self.action, field, 'new %s'%field)
         self.observer.notify.assert_called_with(self.project,'changed_action',self.action)
+    return test_should_notify_observer_of_changes_in_actions
+
+for field in ['description','info','context']:
+    test_name = 'test_should_notify_observer_of_changes_in_action_%s' % field
+    test = test_generator(field)
+    setattr(ProjectWithActionsBehaviour, test_name, test)
         
 
 class ProjectWithInactiveActionsBehaviour(ProjectWithActionsBehaviour,InactiveProjectBehaviour):
@@ -116,6 +128,8 @@ class ProjectWithInactiveActionsBehaviour(ProjectWithActionsBehaviour,InactivePr
     def test_should_return_no_active_action(self):
         self.assertEqual(self.project.actions_with_status(active),[])
 
+
+
 class ProjectWithActiveActionsBehaviour(ProjectWithActionsBehaviour):
     
     def action_status(self):
@@ -132,3 +146,38 @@ class ProjectWithActiveActionsBehaviour(ProjectWithActionsBehaviour):
 
     def test_should_return_no_inactive_action(self):
         self.assertEqual(self.project.actions_with_status(inactive),[])
+
+class ProjectWithInfosBehaviour(ProjectBehaviour):
+    
+    def setUp(self):
+        super(ProjectWithInfosBehaviour,self).setUp()
+        self.info = Mock()
+        self.project.add_info(self.info)
+
+    def test_should_contain_all_added_infos(self):
+        self.assertEqual(self.project.infos,[self.info])
+
+    def test_should_really_forget_removed_infos(self):
+        self.project.remove_info(self.info)
+        self.assertFalse(self.info in self.project.infos)
+
+    def test_should_register_itself_as_observer_for_added_infos(self):
+        self.info.observers.append.assert_called_with(self.project)
+
+    def test_should_deregister_itself_as_observer_for_removed_infos(self):
+        self.project.remove_info(self.info)
+        self.info.observers.remove.assert_called_with(self.project)
+
+
+    def test_should_notify_observer_of_removed_infos(self):
+        self.project.remove_info(self.info)
+        calls = self.observer.notify.call_args_list
+        self.assertTrue(((self.project,'remove_info',self.info),{}) in calls)
+
+    def test_should_notify_observer_of_changes_in_infos(self):
+        self.project.notify(self.info, 'text', 'new text')
+        self.observer.notify.assert_called_with(self.project,'changed_info',self.info)
+
+        
+
+

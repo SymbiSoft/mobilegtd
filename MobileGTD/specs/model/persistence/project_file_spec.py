@@ -35,7 +35,6 @@ class ProjectFileBehaviour(file_based_spec.FileBasedBehaviour):
 	def test_should_calc_file_name_as_project_name_plus_extension(self):
 		self.assertEqual(self.project_file.file_name(),self.project.name+'.prj')
 
-
 	def path(self):
 		return self.path_in_subdirectory(self.subdir())
 
@@ -49,16 +48,20 @@ class ProjectFileBehaviour(file_based_spec.FileBasedBehaviour):
 	def create_file(self):
 		inout.io.create_file(self.path()).close()
 
-	def assert_moved_file_to_correct_directory_if_status_changes(self,status,subdir):
-		self.create_file()
-		self.project_file.notify(self.project, 'status', status)
-		self.project.status = status
-		assert os.path.isfile(self.path_in_subdirectory(subdir))
 
 
 
 
 class ExistingProjectFileBehaviour:
+	
+	def setUp(self):
+		super(ExistingProjectFileBehaviour,self).setUp()
+	
+	def assert_moved_file_to_correct_directory_if_status_changes(self,status,subdir):
+		self.create_file()
+		self.project_file.notify(self.project, 'status', status)
+		self.project.status = status
+		assert os.path.isfile(self.path_in_subdirectory(subdir))
 	
 	def test_should_move_file_correctly_to_review_directory(self):
 		self.assert_moved_file_to_correct_directory_if_status_changes(inactive,'@Review')
@@ -78,6 +81,10 @@ class ExistingProjectFileBehaviour:
 		
 	def test_should_calc_path_correctly(self):
 		self.assertEqual(self.project_file.path(),self.path())
+
+	def test_should_write_if_notified_of_changes(self):
+		self.project_file.notify(self.project, 'add_action', Mock())		
+		assert os.path.isfile(self.path())
 
 	def test_should_write_the_project_description_in_file(self):
 #		pass
