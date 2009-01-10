@@ -3,8 +3,8 @@ sys.path.append(os.path.abspath(os.path.join(os.getcwd(),'..','..','..')))
 #print sys.path
 import file_based_spec
 import model.persistance.action_file
-from model.model import *
-from model.action import Action
+#from model.model import *
+from model.action import *
 
 
 
@@ -21,10 +21,10 @@ class ActionFileBasedBehaviour(file_based_spec.FileBasedBehaviour):
         return os.path.join(self.action.context,self.action.description+'.act')
 
 
-class ProcessedActionFileBehaviour(ActionFileBasedBehaviour):
+class ActiveActionFileBehaviour(ActionFileBasedBehaviour):
 
     def setUp(self):
-        super(ProcessedActionFileBehaviour,self).setUp()
+        super(ActiveActionFileBehaviour,self).setUp()
         self.action.status = active
 
     def test_should_remove_the_file_when_action_is_set_to_done(self):
@@ -50,8 +50,18 @@ class ProcessedActionFileBehaviour(ActionFileBasedBehaviour):
 
     def test_should_write_the_action_description_in_file(self):
         content = self.file_content()
-        assert len(content) > 0
-        assert content == '%s %s'%(self.context,self.description)
+        self.assertTrue(len(content) > 0)
+        self.assertEqual(content, '- %s %s'%(self.context,self.description))
+
+    def test_should_write_if_the_info_changed(self):
+        info = 'new info'
+        self.action.info = info 
+        content = self.file_content()
+        self.assertTrue(len(content) > 0)
+        self.assertEqual(content, '- %s %s (%s)'%(self.context,self.description,info))
+
+
+
 
 def generate_test_for_write_on_change_notification(field):
     def test_should_write_if_notified_of_changes(self):
@@ -64,7 +74,7 @@ def generate_test_for_write_on_change_notification(field):
 for field in ['description','info','context']:
     test_name = 'test_should_write_when_notified_of_changed_%s' % field
     test = generate_test_for_write_on_change_notification(field)
-    setattr(ProcessedActionFileBehaviour, test_name, test)
+    setattr(ActiveActionFileBehaviour, test_name, test)
 
 
 
@@ -115,7 +125,3 @@ class InactiveActionFileBehaviour(UnprocessedActionFileBehaviour):
         super(InactiveActionFileBehaviour,self).setUp()
         self.action.status = inactive
 
-
-
-if __name__ == '__main__':
-    unittest.main()

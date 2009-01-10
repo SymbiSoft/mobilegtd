@@ -3,22 +3,14 @@ import sys,os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..')))
 print sys.path
 import model.action
-from model.model import *
-
-class Observer(object):
-	def __init__(self):
-		self.notified = False
-	def notify(self,object,name,value):
-		self.object = object
-		self.name = name
-		self.value = value
-		self.notified = True
+from model.action import *
+from mock import Mock
 
 class ActionBehaviour(unittest.TestCase):
 
 	def setUp(self):
 		self.action = model.action.Action('oldey','some_context')
-		self.observer = Observer()
+		self.observer = Mock()
 		self.action.observers.append(self.observer)
 
 	def test_should_have_new_field_value_when_set(self):
@@ -27,10 +19,7 @@ class ActionBehaviour(unittest.TestCase):
 
 	def test_should_notify_observers_when_changing_field(self):
 		self.action.description='newea'
-		assert self.observer.notified
-		assert self.observer.object == self.action
-		assert self.observer.name == 'description'
-		assert self.observer.value == 'newea'
+		self.observer.notify.assert_called_with(self.action,'description',new='newea',old='oldey')
 		
 
 
@@ -55,6 +44,3 @@ class ActionParseBehaviour(unittest.TestCase):
 	def test_should_read_the_info_correctly(self):
 		assert self.action.info == self.info
 
-		
-if __name__ == '__main__':
-	unittest.main()
