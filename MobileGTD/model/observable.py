@@ -16,7 +16,17 @@ class ObservableItem(object):
 
 
 
+class ObservableList(list,ObservableItem):
+    def __init__(self):
+        ObservableItem.__init__(self)
 
+    def append(self,item):
+        super(ObservableList,self).append(item)
+        self.notify_observers('add_item', item, None)   
+
+    def remove(self,item):
+        super(ObservableList,self).remove(item)
+        self.notify_observers('remove_item', item, None)   
 
 
 
@@ -217,4 +227,4 @@ class ObservableItem(object):
 #      return newList 
 #   
 #
-__all__ = ["ObservableItem"]#,"ObservableList"]
+__all__ = ["ObservableItem","ObservableList"]

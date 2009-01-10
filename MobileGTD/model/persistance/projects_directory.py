@@ -1,0 +1,2 @@
+class ProjectsDirectory:
+    pass

@@ -8,13 +8,6 @@ from observable import *
 from log.logging import logger
 from config.config import *
 from inout.io import *
-unprocessed = ('unprocessed',0)
-active = ('active',1)
-done = ('done',2)
-tickled = ('tickled',3)
-inactive = ('inactive',4)
-someday = ('someday',5)
-info = ('info',0)
 #logger.log(u'new version')
 
 
@@ -23,37 +16,30 @@ info = ('info',0)
 def invert_dictionary(dictionary):
 	return dict([[v,k] for k,v in dictionary.items()])
 
-sign_status_map = {u'+':done,u'-':active,u'!':inactive,u'/':tickled,u'':unprocessed,u'~':someday}
-status_sign_map = invert_dictionary(sign_status_map)
-status_string_map = {done:u'Done',active:u'active',inactive:u'Inactive',tickled:u'Tickled',unprocessed:u'Unprocessed'}
 
 
 
 
 		
 class ItemWithStatus(object):
-	def __init__(self,status=inactive):
+	def __init__(self,status):
 		self.status = status
-	def status_string(self):
-		status = self.status
-		if status == unprocessed:
-			return u''
-		else:
-			return u'%s '%status_sign_map[status]
-	def __cmp__(self,other):
-		return other.status[1] - self.status[1]
+
 
 class WriteableItem(ObservableItem):
 	def __init__(self):
 		super(WriteableItem, self).__init__()
 	def write(self):
 		write(self.path(),self.file_string())
-	def move_to(self,directory):
+	def move_to(self,directory,old_dir=None):
 		new_file_name = os.path.join(directory,self.file_name())
-		old_file_name = self.path()
+		if old_dir == None:
+			old_dir = self.directory()
+		old_file_name = os.path.join(old_dir,self.file_name())
 		try:
 			os.renames(old_file_name.encode('utf-8'),new_file_name.encode('utf-8'))
 			##logger.log(u'Moved %s to %s'%(repr(old_file_name),repr(new_file_name)))
+			#print u'Moved %s to %s'%(repr(old_file_name),repr(new_file_name))
 			return new_file_name
 		except OSError:
 			#logger.log(u'Cannot move %s to %s: File already exists'%(repr(old_file_name),repr(new_file_name)))
@@ -73,30 +59,25 @@ class WriteableItem(ObservableItem):
 	def encoded_path(self):
 		return self.path().encode('utf-8')
 
-	def rename(self,new_name):
-		extension = os.path.splitext(self.encoded_path())[1]
-		new_file_name = os.path.join(self.directory(),new_name+extension)
+	def extension(self):
+		return os.path.splitext(self.encoded_path())[1]
+	def rename(self,new_name,old=None):
+		if not old:
+			old = os.path.splitext(os.path.basename(self.encoded_path()))[0]
 		
-		#logger.log(u'Renaming to %s'%new_file_name)
 		
-		os.renames(self.encoded_path(),new_file_name.encode('utf-8'))
+		new_file_name = os.path.join(self.directory(),new_name+self.extension())
+		old_file_name = os.path.join(self.directory(),old+self.extension())
+		#logger.log(u'Renaming %s to %s'%(old_file_name,new_file_name))
+		#print(u'Renaming %s to %s'%(old_file_name,new_file_name))
+		os.renames(old_file_name,new_file_name.encode('utf-8'))
 
 
 # Public API
 __all__= (
-		'unprocessed',
-		'active',
-		'done',
-		'tickled',
-		'inactive',
-		'someday',
-		'info',
 		'WriteableItem',   
 		'ItemWithStatus',
 		'ObservableItem',
-		'sign_status_map',
-		'status_sign_map',
-		'status_string_map',
 		'invert_dictionary'
 		
 	  
