@@ -142,3 +142,9 @@ class Project(ObservableItem):
         return self.name == other.name and self.status == other.status
     def __ne__(self,project):
         return not self.__eq__(project)
+
+    def __str__(self):
+        return self.name
+    
+    def __repr__(self):
+        return 'Project %s (%s actions, %s infos)'%(self.name,len(self.actions),len(self.infos))

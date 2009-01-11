@@ -11,6 +11,9 @@ class FileSystemBasedBehaviour(unittest.TestCase):
 		os.chdir(self.current_dir)
 		shutil.rmtree(self.tempdir,True)
 
+	def create_file(self,path):
+		inout.io.create_file(path).close()
+
 class FileBasedBehaviour(FileSystemBasedBehaviour):
 
 	def file_content(self):
@@ -19,8 +22,10 @@ class FileBasedBehaviour(FileSystemBasedBehaviour):
 		f.close()
 		return raw
 
-	def create_file(self):
-		inout.io.create_file(self.path()).close()
+	def create_file(self,path=None):
+		if path == None:
+			path = self.path()
+		super(FileBasedBehaviour,self).create_file(path)
 
 	def write(self,content,path=None):
 		if path == None:

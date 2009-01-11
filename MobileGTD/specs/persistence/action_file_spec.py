@@ -2,7 +2,7 @@ import sys,os,unittest
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(),'..','..','..')))
 #print sys.path
 import file_based_spec
-import model.persistance.action_file
+import persistence.action_file
 #from model.model import *
 from model.action import *
 
@@ -15,7 +15,7 @@ class ActionFileBasedBehaviour(file_based_spec.FileBasedBehaviour):
         self.context = 'context/sub_context'
         self.description = 'some action'
         self.action = Action(self.description, self.context)
-        self.action_file = model.persistance.action_file.ActionFile(self.action)
+        self.action_file = persistence.action_file.ActionFile(self.action)
 
     def path(self):
         return os.path.join(self.action.context,self.action.description+'.act')

@@ -1,6 +1,6 @@
 from mock import Mock
 import file_based_spec
-from model.persistance.project_file import ProjectFile
+from persistence.project_file import ProjectFile
 from model import project
 from model import action
 from model import info
