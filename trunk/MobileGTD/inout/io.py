@@ -39,7 +39,7 @@ def list_dir(root,recursive=False,filter=None):
         file_name = u_join(root,name.decode('utf-8'))
         if recursive and os.path.isdir(file_name.encode('utf-8')):
             all_files_and_dirs.extend(list_dir(file_name, True,filter))
-        if filter and filter(file_name):
+        if (not filter) or filter(file_name):
             all_files_and_dirs.append(file_name)
     return all_files_and_dirs
 

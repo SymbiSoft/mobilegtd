@@ -6,7 +6,8 @@ from model.model import invert_dictionary,WriteableItem
 project_dir_status_map = {u'Done':done,u'Review':inactive,u'Someday':someday,u'Tickled':tickled}
 status_project_dir_map = invert_dictionary(project_dir_status_map)
 
-
+def project_name(file_name):
+    return os.path.splitext(os.path.basename(file_name))[0]
 
 class ProjectFile(WriteableItem):
     def __init__(self,project):
@@ -51,8 +52,8 @@ class ProjectFile(WriteableItem):
 
     def read(file_path):
         file_name = os.path.basename(file_path)
-        project_name = os.path.splitext(file_name)[0]
-        project = Project(project_name,inactive)
+        name = project_name(file_name)
+        project = Project(name,inactive)
         project_file = ProjectFile(project)
 #        project.observers.append()
         file_content = parse_file_to_line_list(file_path)
