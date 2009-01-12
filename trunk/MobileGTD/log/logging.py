@@ -45,6 +45,8 @@ class ConsoleLogger:
 class NullLogger:
     def log(self,text,level=0):
         pass
+    def log_stderr(self):
+        pass
     def close(self):
         pass
         

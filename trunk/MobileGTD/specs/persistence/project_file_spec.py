@@ -1,11 +1,15 @@
 from mock import Mock
 import file_based_spec
-from persistence.project_file import ProjectFile
+import unittest
+from persistence import project_file
+from persistence.project_file import ProjectFile,ProjectFileCreator
 from model import project
 from model import action
 from model import info
+from persistence.action_file import ActionFile
 import os
 
+            
 
 class ProjectFileBehaviour(file_based_spec.FileBasedBehaviour):
 
@@ -30,13 +34,12 @@ class ProjectFileBehaviour(file_based_spec.FileBasedBehaviour):
         self.info.file_string.return_value = 'important info'
         project.infos = [self.info]
         return project
+
     def status(self):
         return project.active
 
     def test_should_have_registered_itself_as_observer(self):
         self.assertTrue(self.project_file in self.project.observers)
-#        self.project.observers.append.assert_called_with(self.project_file)
-
 
     def test_should_calc_file_name_as_project_name_plus_extension(self):
         self.assertEqual(self.project_file.file_name(),self.project.name+'.prj')
@@ -47,9 +50,9 @@ class ProjectFileBehaviour(file_based_spec.FileBasedBehaviour):
     def path_in_subdirectory(self,subdir):
         project_file_name = self.project.name+'.prj'
         if subdir and len(subdir) > 0:
-            return os.path.join(subdir,project_file_name)
+            return os.path.join('@Projects',subdir,project_file_name)
         else:
-            return project_file_name
+            return os.path.join('@Projects',project_file_name)
 
 
 
@@ -89,6 +92,8 @@ class ExistingProjectFileBehaviour:
     def test_should_write_if_notified_of_changes(self):
         self.project_file.notify(self.project, 'add_action', Mock(),None)        
         assert os.path.isfile(self.path())
+
+
 
 class WritingProjectFileBehaviour(ExistingProjectFileBehaviour):
     def test_should_write_the_project_description_in_file(self):
@@ -131,17 +136,18 @@ class InactiveProjectFileBehaviour(ProjectFileBehaviour,ExistingProjectFileBehav
 
 
 class ProjectFileReaderBehaviour(ProjectFileBehaviour,ExistingProjectFileBehaviour):
+
     def setUp(self):
         super(ProjectFileReaderBehaviour,self).setUp()
         
     def create_project(self):
         self.original_project = project.Project('Example Project')
         self.original_project.add_info(info.Info('some info'))
-        active_action = action.Action('active action','Online/Google')
+        active_action = action.Action('active action','Online/Google',status=action.unprocessed)
         self.original_project.add_action(active_action)
-        project_file = ProjectFile(self.original_project)
-        self.write(project_file.file_string(),project_file.path())
-        return ProjectFile.read(project_file.path())
+        p_file = ProjectFile(self.original_project)
+        self.write(p_file.file_string(),p_file.path())
+        return project_file.read(p_file.path())
         
     def path(self):
         return self.project_file.path()
@@ -150,8 +156,17 @@ class ProjectFileReaderBehaviour(ProjectFileBehaviour,ExistingProjectFileBehavio
         self.assertEqual(self.project.name,'Example Project')
 
     def test_should_read_the_infos_correctly(self):
-        self.assertEqual(self.original_project.infos,[info.Info('some info')])
+        self.assertEqual(self.project.infos,[info.Info('some info')])
 
     def test_should_read_the_actions_correclty(self):
-        self.assertEqual(self.original_project.actions,self.project.actions)
+        a = action.Action('active action','Online/Google',status=action.unprocessed)
+        a.project = self.project
+        self.assertEqual(self.project.actions,[a])
         
+    def test_should_create_action_files_for_all_actions(self):
+        has_action_file=False
+        for a in self.project.actions:
+            for o in a.observers:
+                if type(o) == ActionFile and o.action == a:
+                    has_action_file=True
+        self.assertTrue(has_action_file)

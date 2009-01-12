@@ -29,4 +29,4 @@ class ActionWidget:
             self.action.deactivate()
         self.project.dirty=True
     def list_repr(self):
-        return u'  %s %s'%(self.action.status_string(),self.action.description)
+        return str(self.action)

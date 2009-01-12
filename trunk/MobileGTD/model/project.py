@@ -1,25 +1,14 @@
 from action import Action
 from info import Info
-from model import ItemWithStatus
+from model import ItemWithStatus,Status
 import action
-from inout.io import parse_file_to_line_list,u_join
-import os,re
 from observable import *
-import copy
-from filtered_list import FilteredList
+from filtered_list import FilteredList,StatusFilteredList
 
-class ProjectStatus(object):
-    
-    def __init__(self,name,value):
-        self.name = name
-        self.value = value
-
-    def __str__(self):
-        return self.name
+class ProjectStatus(Status):
 
     def update(self,project):
         return self
-
 
 
 class Inactive(ProjectStatus):
@@ -73,12 +62,12 @@ def parse_lines(lines):
 
 
 
-class Project(ObservableItem):
-    
+class Project(ObservableItem,ItemWithStatus):
+    observers = []
     def __init__(self,name,status = inactive,actions=[],infos=[]):
-        self.status = status
+        ItemWithStatus.__init__(self,status)
         self.name=name
-        self.actions=FilteredList(actions)
+        self.actions=StatusFilteredList(actions)
         self.infos=FilteredList(infos)
         self.update_methods = {'status':self.action_changed_status,
                                'description':self.action_changed_content,
@@ -86,6 +75,8 @@ class Project(ObservableItem):
                                'context':self.action_changed_content,
                                'text':self.info_changed}
         super(Project,self).__init__()
+        for o in Project.observers:
+            o.notify(self.__class__,'new_project',self,None)
 
 
     def add_action(self,action):
@@ -102,7 +93,7 @@ class Project(ObservableItem):
         self.notify_observers('remove_action',action)
         self.update_status()
 
-    def add_info(self,info):
+    def add_info(self,info,position=None):
         info.observers.append(self)
         self.infos.append(info)
         self.notify_observers('add_info', info)
@@ -113,14 +104,13 @@ class Project(ObservableItem):
         self.notify_observers('remove_info', info)
 
     def actions_with_status(self,status):
-#        result = []
-#        for action in self.actions:
-#            if action.status == status:
-#                result.append(action)
         return self.actions.with_property(lambda a:a.status == status)
 
+    def active_actions(self):
+        return self.actions_with_status(action.active)
+
     def has_active_actions(self):
-        return len(self.actions_with_status(action.active)) > 0
+        return len(self.active_actions()) > 0
     
     def notify(self,action,attribute,new_value,old_value=None):
         self.update_methods[attribute](action,new_value)
@@ -137,14 +127,16 @@ class Project(ObservableItem):
     def action_changed_status(self,action,status):
         self.update_status()
         
-        
     def __eq__(self, other):
         return self.name == other.name and self.status == other.status
+
     def __ne__(self,project):
         return not self.__eq__(project)
 
     def __str__(self):
         return self.name
-    
+
+    def status_symbol_and_name(self):
+        return self.status_symbol()+self.name
     def __repr__(self):
         return 'Project %s (%s actions, %s infos)'%(self.name,len(self.actions),len(self.infos))

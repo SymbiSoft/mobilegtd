@@ -22,10 +22,10 @@ sms_regexp = re.compile('([^\w ]*)',re.U)
 class ProjectListView(EditableListView):
     def __init__(self,projects):
         self.projects = projects
-        self.projects.attach(self)
-        super(ProjectListView, self).__init__(u'Projects', [projects.get_current_projects,projects.get_all_projects,projects.get_inactive_projects],PROJECT_LIST_KEYS_AND_MENU)
+        self.projects.observers.append(self)
+        super(ProjectListView, self).__init__(u'Projects', [lambda:projects],PROJECT_LIST_KEYS_AND_MENU)
         #appuifw.note(u'Before starting thread')
-        thread.start_new_thread(projects.process,())
+#        thread.start_new_thread(projects.process,())
         #appuifw.note(u'After starting thread %s'%repr(projects.observers))
     def exit(self):
         self.exit_flag = True
@@ -53,7 +53,7 @@ class ProjectListView(EditableListView):
         widgets.append(NewProjectWidget(self.projects))
         widgets.append(NewActionWidget())
         self.filtered_list()
-#        widgets.extend([ProjectWidget(self.projects,project) for project in self.filtered_list()])
+        widgets.extend([ProjectWidget(self.projects,project) for project in self.projects])
         if read_sms:
             from sms_widget import create_sms_widgets
             try:

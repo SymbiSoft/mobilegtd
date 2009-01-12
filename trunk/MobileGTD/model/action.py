@@ -1,25 +1,8 @@
 import re
 from model import *
 
-class ActionStatus:
-    signs = {}
-    def __init__(self,name,value=0,sign=u''):
-        self.name = name
-        self.value = value
-        self.sign = sign
-        ActionStatus.signs[sign] = self
-    def __cmp__(self,other):
-        if not other:
-            return 1
-        return other.value - self.value
-        
-    def sign(self):
-        return self.sign
-    
-    def get_status(sign):
-        return ActionStatus.signs[sign]
-    get_status = staticmethod(get_status)
-
+class ActionStatus(Status):
+    pass
 
 
 unprocessed = ActionStatus('unprocessed',0)
@@ -37,10 +20,10 @@ ABBREVIATIONS = {} # Configuration("abbreviations.cfg",default_abbreviations)
 def parse_action_line(string):
     matching = action_regexp.match(string)
     description = matching.group('description').rstrip(u' \r\n')
-    status_string = matching.group('status')
-    if (status_string == None):
-        status_string = u''
-    status = ActionStatus.get_status(status_string)
+    status_symbol = matching.group('status')
+    if (status_symbol == None):
+        status_symbol = u''
+    status = ActionStatus.get_status(status_symbol)
     info = matching.group('info')
     context = parse_context(matching.group('context'))
     if(info==None):
@@ -68,7 +51,7 @@ class Action(ObservableItem,ItemWithStatus):
     
     parse = staticmethod(parse)
     
-    def __init__(self,description,context,project=None,info=u'',status=unprocessed):
+    def __init__(self,description,context,project=None,info=u'',status=active):
         super(Action, self).__init__()
         self.project = project
         self.description = description
@@ -87,8 +70,8 @@ class Action(ObservableItem,ItemWithStatus):
         
     def __repr__(self):
         advanced_info = ''
-        if self.project and len(self.project)>0:
-            advanced_info = advanced_info+' Project: '+self.project
+        if self.project:
+            advanced_info = advanced_info+' Project: '+str(self.project)
         if len(self.info) > 0:
             advanced_info = advanced_info +' Info: '+self.info
         if len(advanced_info) > 0:
@@ -96,7 +79,7 @@ class Action(ObservableItem,ItemWithStatus):
         return repr(self.description)+' @'+repr(self.context)+repr(advanced_info)
     
     def project_file_string(self,entry_separator=' '):
-        return ('%s%s'%(self.status_string(),self.context_description_info())).strip()
+        return ('%s%s'%(self.status_symbol(),self.context_description_info())).strip()
     
     def context_description_info(self,entry_separator=' '):
         return u'%s%s%s%s%s'%(\
@@ -110,13 +93,11 @@ class Action(ObservableItem,ItemWithStatus):
             info_string = u'%s(%s)'%(entry_separator,self.info)
         return info_string
 
-    def status_string(self):
-        sign = self.status.sign
-        if len(sign)>0:
-            sign = sign+' '
-        return sign
+    def __str__(self):
+        return u'  %s %s'%(self.status_symbol(),self.description)
     def __cmp__(self,other):
         return self.status.__cmp__(other.status)
 
-
-__all__ = ["Action","active","done","tickled","inactive","someday","info","unprocessed"]
+    def summary(self):
+        return self.description
+__all__ = ["Action","active","done","tickled","inactive","someday","info","unprocessed","parse_action_line","parse_context"]

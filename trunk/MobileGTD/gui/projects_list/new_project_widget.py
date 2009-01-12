@@ -1,5 +1,6 @@
 import appuifw
 from project_widget import ProjectWidget
+from model.project import Project
 from model.info import Info
 class NewProjectWidget:
     def __init__(self,projects):
@@ -8,7 +9,8 @@ class NewProjectWidget:
         project_name = appuifw.query(u'Enter a name for the project','text',proposed_name)
         if not project_name:
             return
-        project = self.projects.create_project(project_name)
+        project = Project(project_name)
+        self.projects.append(project)
         if infos:
             for info in infos:
                 project.add_info(Info(info))

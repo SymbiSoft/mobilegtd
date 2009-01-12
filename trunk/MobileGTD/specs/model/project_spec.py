@@ -7,6 +7,16 @@ from model import project
 from model import action
 import copy
 
+class ProjectClassBehaviour(unittest.TestCase):
+    def setUp(self):
+        self.p_class = Project
+        self.observer = Mock()
+        self.p_class.observers.append(self.observer)
+    
+    def test_should_inform_listeners_of_project_creation(self):
+        p = Project('Test')
+        self.assertTrue(self.observer.notify.called)
+
 class ProjectBehaviour(unittest.TestCase):
 
     def setUp(self):

@@ -1,8 +1,8 @@
 import model, config, gui
-import appuifw
+import appuifw,os
 import thread
 from model.model import *
-from config.config import *
+from config.config import gtd_directory,Configuration
 from config.defaultconfig import default_actions_menu
 from gui.gui import EditableListView
 from infos_widget import InfosWidget
@@ -10,6 +10,8 @@ from info_widget import InfoWidget
 from context_widget import ContextWidget
 from action_widget import ActionWidget
 from action_view import ActionView
+from model import action
+from model import info
 from model.action import Action
 from log.logging import logger
 from e32 import Ao_lock, in_emulator
@@ -18,12 +20,12 @@ import key_codes
 
 from gui import *
 
-ACTION_LIST_KEYS_AND_MENU = Configuration("actions.cfg")
+ACTION_LIST_KEYS_AND_MENU = Configuration(os.path.join(gtd_directory,"actions.cfg"))
 
 
 def ask_for_action(project_name,proposition=None):
 
-    action = Action(project_name,u'',u'',u'',u'')
+    action = Action(project_name,u'')
     was_saved = edit_action(action)
     if was_saved:
     	return action
@@ -60,29 +62,28 @@ def ask_for_info(proposition):
 
 
 class ProjectView(EditableListView):
-    def __init__(self,project,projects):
+    def __init__(self,project):
         self.project = project
-        self.projects = projects
-        super(ProjectView, self).__init__(self.project_name(), [self.project.not_done_actions,self.project.get_actions,self.project.inactive_actions], ACTION_LIST_KEYS_AND_MENU)
+        self.project.observers.append(self)
+        super(ProjectView, self).__init__(self.project.name, [lambda:self.project.actions.with_property(lambda a:a.status==action.active)], ACTION_LIST_KEYS_AND_MENU)
 
     def exit(self):
+        self.project.observers.remove(self)
         EditableListView.exit(self)
-        self.project.dirty = True
-        self.project.write()
-        self.projects.update_status(self.project)
+#        self.project.dirty = True
+#        self.project.write()
+#        self.projects.update_status(self.project)
     def edit_menu(self):
         show_config(ACTION_LIST_KEYS_AND_MENU)
         ACTION_LIST_KEYS_AND_MENU.write()
 
     def actions(self):
-        return self.filtered_list()
-    def infos(self):
-        return self.project.get_infos()
+        return self.project.actions
+
     def generate_widgets(self):
         widgets = []
         widgets.append(InfosWidget(self.project))
-        infos = self.infos()
-        for info in infos:
+        for info in self.project.infos:
             widgets.append(InfoWidget(info,self.project))
         for (context,actions) in self.actions_by_context().items():
             widgets.append(ContextWidget(context,self.project))
@@ -96,32 +97,30 @@ class ProjectView(EditableListView):
                 context_actions_map[action.context]=[]
             context_actions_map[action.context].append(action)
         return context_actions_map
-    def project_name(self):
-        return self.project.name()
+
     def add_action(self):
-        action = ask_for_action(self.project_name())
+        action = ask_for_action(self.project.name)
         if action:
-            action.project = self.project_name()
-            action.process()
             self.project.add_action(action)
     def add_info(self):
-        info = ask_for_info(self.project.name())
-        if info:
+        i = ask_for_info(self.project.name)
+        if i:
             selected = self.selected_index()
             # First position is "Infos"
-            if selected>=0 and selected <= len(self.project.get_infos()):
+            if selected>=0 and selected <= len(self.project.infos):
                 position = selected
             else:
                 position = None
-            self.project.add_info(model.Info(info),position)
+            self.project.add_info(info.Info(i),position)
             if position:
                 self.set_index(position+1)
 
 
 
+    def notify(self,project,attribute,new=None,old=None):
+        self.refresh()
 
 
 
 
-
-__all__= ('ProjectView','ask_for_action')
+__all__= ('ProjectView','ask_for_action','ask_for_info')

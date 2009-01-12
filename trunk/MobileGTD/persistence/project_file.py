@@ -1,13 +1,45 @@
 import re,os
+from inout.io import parse_file_to_line_list
 from model.project import *
 from model.model import invert_dictionary,WriteableItem
-
+from action_file import ActionFile
 
 project_dir_status_map = {u'Done':done,u'Review':inactive,u'Someday':someday,u'Tickled':tickled}
 status_project_dir_map = invert_dictionary(project_dir_status_map)
 
+
+projects_dir = '@Projects'
+
 def project_name(file_name):
     return os.path.splitext(os.path.basename(file_name))[0]
+
+
+class ProjectFileCreator(object):
+    
+    def notify(self,project_class,attribute,new=None,old=None):
+        ProjectFile(new)
+    
+    def __eq__(self,other):
+        return type(other) == ProjectFileCreator
+
+#Project.observers.append(ProjectFileCreator())
+
+
+
+def read(file_path):
+    file_name = os.path.basename(file_path)
+    name = project_name(file_name)
+    project = Project(name,inactive)
+    file_content = parse_file_to_line_list(file_path)
+    actions,infos = parse_lines(file_content)
+    for action in actions:
+        project.add_action(action)
+        action.observers.append(ActionFile(action))
+    
+    for info in infos:    
+        project.add_info(info)
+    return project
+
 
 class ProjectFile(WriteableItem):
     def __init__(self,project):
@@ -30,8 +62,8 @@ class ProjectFile(WriteableItem):
     def directory_for_status(self,status):
         status_string = status.name.capitalize()
         if len(status_string) > 0:
-            return '@'+status_string
-        return ''
+            return os.path.join(projects_dir,'@'+status_string)
+        return projects_dir
         
     def notify(self,project,attribute,new=None,old=None):
         if attribute == 'status':
@@ -39,7 +71,7 @@ class ProjectFile(WriteableItem):
         elif attribute == 'name':
             self.rename(new)
         else:
-            self.write()
+            super(ProjectFile,self).notify(project,attribute,new=new,old=old)
     
     def file_string(self):
         lines = []
@@ -50,20 +82,4 @@ class ProjectFile(WriteableItem):
             lines.append(action.project_file_string())
         return u'\n'.join(lines) 
 
-    def read(file_path):
-        file_name = os.path.basename(file_path)
-        name = project_name(file_name)
-        project = Project(name,inactive)
-        project_file = ProjectFile(project)
-#        project.observers.append()
-        file_content = parse_file_to_line_list(file_path)
-        actions,infos = parse_lines(file_content)
-        for action in actions:
-            project.add_action(action)
-        
-        for info in infos:    
-            project.add_info(info)
-        return project
-
-
-    read = staticmethod(read)
+    

@@ -9,4 +9,7 @@ class FilteredList(list):
                 result.append(item)
         return result
     
-    
+
+class StatusFilteredList(FilteredList):
+    def with_status(self,status):
+        return self.with_property(lambda i:i.status == status)   

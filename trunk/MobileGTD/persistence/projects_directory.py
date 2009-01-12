@@ -1,6 +1,7 @@
 from inout.io import *
 from model.project import Project
-from project_file import *
+from project_file import ProjectFile
+import project_file
 def is_project(path):
     return os.path.splitext(path)[1]=='.prj'
 
@@ -13,7 +14,8 @@ class ProjectsDirectory:
 
     def read(self):
         for f in list_dir(self.directory,recursive=False,filter=is_project):
-            name = project_name(f)
-            print name
-            self.projects.append(Project(name))
-        
+            p = project_file.read(f)
+            self.projects.append(p)
+
+    def notify(self,projects,attribute,new=None,old=None):
+        ProjectFile(new) 
