@@ -4,9 +4,9 @@ class ProjectWidget:
         self.project = project
         self.projects = projects
     def change(self):
-        appuifw.note(u'Opening')
+#        appuifw.note(u'Opening')
         from gui.project_details.project_view import ProjectView
-        edit_view = ProjectView(self.project, self.projects)
+        edit_view = ProjectView(self.project)
         edit_view.run()
 
     def add_action(self):
@@ -36,12 +36,12 @@ class ProjectWidget:
     def remove(self):
         self.projects.set_done(self.project)
     def list_repr(self):
-        return self.project.name_with_status()
+        return self.project.status_symbol_and_name()
     def name_and_details(self):
         if self.project.has_active_actions():
             details=self.project.active_actions()[0].summary()
         else:
-            details=self.project.additional_info()
+            details=u'Something' #self.project.additional_info()
         return (self.list_repr(),details)
 
     

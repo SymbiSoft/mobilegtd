@@ -148,7 +148,7 @@ class ListView(object):
 
 class WidgetBasedListView(ListView):
     def __init__(self,title):
-        self.title = title
+        super(WidgetBasedListView,self).__init__(title)
         self.exit_flag = False
         self.widgets = self.generate_widgets()
         self.view = appuifw.Listbox(self.all_widget_entries(),self.change_entry)
@@ -158,9 +158,12 @@ class WidgetBasedListView(ListView):
         self.set_bindings_for_selection(0)
         ListView.run(self)
 
+    def notify(self,object,attribute,new=None,old=None):
+        self.refresh()
     def refresh(self):
         self.widgets = self.generate_widgets()
         self.redisplay_widgets()
+        super(WidgetBasedListView,self).refresh()
     def redisplay_widgets(self):
         self.set_index(self.selected_index())
     def set_index(self,index):
@@ -187,7 +190,7 @@ class KeyBindingView(object):
 
     def get_menu_entries(self):
         menu_entries=[]
-        for key,key_name,description,function in self.key_and_menu_bindings(selected_index):
+        for key,key_name,description,function in self.key_and_menu_bindings(self.selected_index()):
             if description != '':
                 if key:
                     if key_name == 'Backspace': key_name='C'
@@ -210,12 +213,13 @@ class KeyBindingView(object):
         for key in all_key_values():
             self.view.bind(key,no_action)
 
-class SearchableListView(object):
-    def __init__(self,entry_filters):
+class SearchableListView(WidgetBasedListView):
+    def __init__(self,title,entry_filters):
         self.current_entry_filter_index = 0
         self.entry_filters = entry_filters
         self.filtered_list = self.entry_filters[0]
         self.lock = None
+        super(SearchableListView,self).__init__(title)
 
 
     def search_item(self):
@@ -232,8 +236,8 @@ class SearchableListView(object):
 
 class EditableListView(SearchableListView,KeyBindingView):
     def __init__(self,title,entry_filters,binding_map):
-        super(KeyBindingView, self).__init__(title,binding_map)
-        super(EditableListView, self).__init__(entry_filters)
+        KeyBindingView.__init__(self,binding_map)
+        super(EditableListView, self).__init__(title,entry_filters)
 
     def key_and_menu_bindings(self,selected_index):
         key_and_menu_bindings=[]
@@ -250,7 +254,8 @@ class EditableListView(SearchableListView,KeyBindingView):
     def execute_and_update(self,function):
         return lambda: (function(),self.refresh(),self.index_changed())
 
-
+    def notify(self,item,attribute,new=None,old=None):
+        self.refresh()
 
 #class DisplayableFunction:
 #    def __init__(self,display_name,function):

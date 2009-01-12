@@ -15,6 +15,9 @@ class ActionFileBasedBehaviour(file_based_spec.FileBasedBehaviour):
         self.context = 'context/sub_context'
         self.description = 'some action'
         self.action = Action(self.description, self.context)
+        self.action_file()
+
+    def action_file(self):
         self.action_file = persistence.action_file.ActionFile(self.action)
 
     def path(self):
@@ -40,13 +43,10 @@ class ActiveActionFileBehaviour(ActionFileBasedBehaviour):
         assert os.path.isfile(self.path())
 
     def test_should_move_the_file_when_context_is_changed(self):
+        old_path = self.path()
         self.action.context = 'other_context'
         assert os.path.isfile(self.path())
-
-    def test_should_set_action_to_done_if_file_does_not_exist(self):
-        os.remove(self.path())
-        self.action_file.update_done_status()
-        assert self.action.status == done
+        self.assertFalse(os.path.isfile(old_path))
 
     def test_should_write_the_action_description_in_file(self):
         content = self.file_content()
@@ -113,7 +113,24 @@ for field in ['description','info','context']:
     setattr(UnprocessedActionFileBehaviour, test_name, test)
 
 
+class ActiveDeletedActionFileBehaviour(ActionFileBasedBehaviour):
+    
+    def setUp(self):
+        super(ActiveDeletedActionFileBehaviour,self).setUp()
+        self.action.status = active
+#        os.remove(self.path())
+        ActionFileBasedBehaviour.action_file(self)
+
+    def action_file(self):
+        pass
+
+    def test_should_set_action_to_done_if_file_does_not_exist(self):
+#        self.action_file.update_done_status()
+        assert self.action.status == done
+
+
 class DoneActionFileBehaviour(UnprocessedActionFileBehaviour):
+    
     def setUp(self):
         super(DoneActionFileBehaviour,self).setUp()
         self.action.status = done

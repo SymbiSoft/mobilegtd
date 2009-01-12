@@ -17,6 +17,28 @@ def invert_dictionary(dictionary):
 	return dict([[v,k] for k,v in dictionary.items()])
 
 
+class Status(object):
+    symbols = {}
+    def __init__(self,name,value=0,symbol=u''):
+        self.name = name
+        self.value = value
+        self.symbol = symbol
+        Status.symbols[symbol] = self
+    def __cmp__(self,other):
+        if not other:
+            return 1
+        return other.value - self.value
+
+    def __str__(self):
+        return self.name
+
+        
+    def symbol(self):
+        return self.symbol
+    
+    def get_status(symbol):
+        return Status.symbols[symbol]
+    get_status = staticmethod(get_status)
 
 
 
@@ -25,6 +47,11 @@ class ItemWithStatus(object):
 	def __init__(self,status):
 		self.status = status
 
+	def status_symbol(self):
+		if self.status.symbol and len(self.status.symbol) > 0:
+			return self.status.symbol + u' '
+		else:
+			return u''
 
 class WriteableItem(ObservableItem):
 	def __init__(self):
@@ -49,8 +76,11 @@ class WriteableItem(ObservableItem):
 		return os.path.dirname(self.encoded_path())
 	def file_name(self):
 		return os.path.basename(self.encoded_path())
-	def remove(self):
-		encoded_path = self.encoded_path()
+	def remove(self,path=None):
+		if not path:
+			encoded_path = self.encoded_path()
+		else:
+			encoded_path = path.encode('utf-8')
 		if os.path.isfile(encoded_path):
 			os.remove(encoded_path)
 	def exists(self):
@@ -72,13 +102,15 @@ class WriteableItem(ObservableItem):
 		#print(u'Renaming %s to %s'%(old_file_name,new_file_name))
 		os.renames(old_file_name,new_file_name.encode('utf-8'))
 
+	def notify(self,action,attribute,new=None,old=None):
+		self.write()
 
 # Public API
 __all__= (
 		'WriteableItem',   
 		'ItemWithStatus',
 		'ObservableItem',
-		'invert_dictionary'
-		
+		'invert_dictionary',
+		'Status'
 	  
 		  )

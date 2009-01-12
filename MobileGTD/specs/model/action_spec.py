@@ -13,6 +13,9 @@ class ActionBehaviour(unittest.TestCase):
 		self.observer = Mock()
 		self.action.observers.append(self.observer)
 
+	def test_should_be_active_by_default(self):
+		self.assertEqual(self.action.status,active)
+
 	def test_should_have_new_field_value_when_set(self):
 		self.action.description='newey'
 		assert self.action.description == 'newey'
@@ -43,4 +46,3 @@ class ActionParseBehaviour(unittest.TestCase):
 
 	def test_should_read_the_info_correctly(self):
 		assert self.action.info == self.info
-
