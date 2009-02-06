@@ -1,4 +1,5 @@
 import appuifw #Only temporary
+from model import project
 class ProjectWidget:
     def __init__(self,projects,project):
         self.project = project
@@ -24,7 +25,7 @@ class ProjectWidget:
     def review(self):
         self.projects.review(self.project)
     def activate(self):
-        self.projects.activate(self.project)
+        self.project.status = project.active
     def process(self):
         appuifw.note(u'Processing %s'%self.project.name())
         self.projects.process(self.project)
@@ -34,7 +35,7 @@ class ProjectWidget:
         if new_name != None:
             self.project.set_name(new_name)
     def remove(self):
-        self.projects.set_done(self.project)
+        self.project.status = project.done
     def list_repr(self):
         return self.project.status_symbol_and_name()
     def name_and_details(self):

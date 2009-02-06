@@ -124,9 +124,9 @@ class datetime:
                         
     def __cmp__(self, other):
         if type(other) is type(None):
-            raise Exception('This comparison is not supported')
+            raise Exception('Comparison of %s (%s) with %s (%s) is not supported'%(self,type(self),other,type(other)))
         elif type(other) is InstanceType:
-            if other.__class__.__name__ == self.__class__.__name__:
+#            if other.__class__.__name__ == self.__class__.__name__:
                 if other.__class__.__name__ == 'date':
                     return self._compareDate(other)
                 elif other.__class__.__name__ == 'time':
@@ -138,11 +138,11 @@ class datetime:
                     else:
                         return date
                 else:
-                    raise Exception('This comparison is not supported')
-            else:
-                raise Exception('This comparison is not supported')
+                    raise Exception('Comparison of %s (%s) with %s (%s) is not supported'%(self,type(self),other,type(other)))
+#            else:
+#                raise Exception('Comparison of %s (%s) with %s (%s) is not supported'%(self,self.__class__,other,other.__class__))
         else:
-            raise Exception('This comparison is not supported')
+            raise Exception('Comparison of %s (%s) with %s (%s) is not supported'%(self,type(self),other,type(other)))
             
     def __eq__(self, other):
         if type(other) is InstanceType:
@@ -272,9 +272,21 @@ class date(datetime):
         wday = calendar.weekday(int(sql[0:4]),int(sql[5:7]),int(sql[8:10]))
         return (int(sql[0:4]),int(sql[5:7]),int(sql[8:10]),0,0,0,wday,0,-1)
     
-    def now(self):
+    def now(self=None):
         now = t.localtime()
         return date(now[0],now[1],now[2])
+    now = staticmethod(now)
+
+    def in_x_days(number_of_days=0):
+        secs = t.mktime(t.localtime())
+        day_secs = secs+24*60*60*number_of_days
+        day = t.localtime(day_secs)
+        return date(day[0],day[1],day[2])
+    in_x_days=staticmethod(in_x_days)  
+    
+    def tomorrow():
+        return date.in_x_days(1)
+    tomorrow = staticmethod(tomorrow)
         
 class time(datetime):
     

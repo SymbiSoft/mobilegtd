@@ -16,14 +16,30 @@ from inout.io import *
 def invert_dictionary(dictionary):
 	return dict([[v,k] for k,v in dictionary.items()])
 
+def no_transition_policy(self,owner):
+	return self
+
+
 
 class Status(object):
     symbols = {}
-    def __init__(self,name,value=0,symbol=u''):
+    names = {}
+    def __init__(self,name,value=0,symbol=u'',transition_policy=no_transition_policy):
         self.name = name
         self.value = value
         self.symbol = symbol
         Status.symbols[symbol] = self
+        Status.names[name] = self
+        self.transition_policy = transition_policy
+
+    def __eq__(self,other):
+#    	print "Called eq with %s (%s) and %s (%s)"%(repr(self),type(self),repr(other),type(other))
+#    	if self == other:
+#    		return True
+    	if (not self and other) or (not other and self):
+    		return False
+    	return self.name == other.name #and self.value == other.value and type(self) == type(other)
+    
     def __cmp__(self,other):
         if not other:
             return 1
@@ -32,7 +48,9 @@ class Status(object):
     def __str__(self):
         return self.name
 
-        
+    def __repr__(self):
+    	return "%s %s %s (%s)"%(type(self),self.value, self.name,id(self))
+     
     def symbol(self):
         return self.symbol
     
@@ -40,9 +58,15 @@ class Status(object):
         return Status.symbols[symbol]
     get_status = staticmethod(get_status)
 
+    def get_status_for_name(name):
+    	return Status.names[name]
+    get_status_for_name = staticmethod(get_status_for_name)
+
+    def update(self,owner):
+        return self.transition_policy(self,owner)
 
 
-		
+	
 class ItemWithStatus(object):
 	def __init__(self,status):
 		self.status = status

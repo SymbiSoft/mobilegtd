@@ -5,6 +5,7 @@ import file_based_spec
 import persistence.action_file
 #from model.model import *
 from model.action import *
+from model import action
 
 
 
@@ -23,6 +24,11 @@ class ActionFileBasedBehaviour(file_based_spec.FileBasedBehaviour):
     def path(self):
         return os.path.join(self.action.context,self.action.description+'.act')
 
+    def test_should_register_as_an_observer_for_the_action(self):
+        self.assertTrue(self.action_file in self.action.observers)
+        
+#    def test_should_overwrite_active_status_with_own_implementation(self):
+#        self.assertEqual(action.active,persistence.action_file.active_status)
 
 class ActiveActionFileBehaviour(ActionFileBasedBehaviour):
 
@@ -60,7 +66,10 @@ class ActiveActionFileBehaviour(ActionFileBasedBehaviour):
         self.assertTrue(len(content) > 0)
         self.assertEqual(content, '- %s %s (%s)'%(self.context,self.description,info))
 
-
+    def test_should_set_action_status_to_done_on_update_if_file_does_not_exist(self):
+        self.action_file.remove()
+        self.action.update_status()
+        self.assertEqual(self.action.status,action.done)
 
 
 def generate_test_for_write_on_change_notification(field):

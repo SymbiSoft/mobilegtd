@@ -10,10 +10,11 @@ def is_project(path):
 class ProjectsDirectory:
     def __init__(self,projects,directory):
         self.projects = projects
+        self.projects.observers.append(self)
         self.directory = directory
 
     def read(self):
-        for f in list_dir(self.directory,recursive=False,filter=is_project):
+        for f in list_dir(self.directory,recursive=True,filter=is_project):
             p = project_file.read(f)
             self.projects.append(p)
 

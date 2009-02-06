@@ -5,7 +5,7 @@ import model.project
 from model.project import Project
 from model import project
 from model import action
-import copy
+
 
 class ProjectClassBehaviour(unittest.TestCase):
     def setUp(self):
@@ -20,11 +20,11 @@ class ProjectClassBehaviour(unittest.TestCase):
 class ProjectBehaviour(unittest.TestCase):
 
     def setUp(self):
-        self.name = 'project'
+        self.name = 'my project'
         self.status = self.initial_status()
         self.actions = self.initial_actions()
         self.infos = self.initial_infos()
-        self.project = model.project.Project(self.name,self.status,copy.copy(self.actions),copy.copy(self.infos))
+        self.project = model.project.Project(self.name,self.status,self.actions,self.infos)
         self.observer = Mock()
         self.project.observers.append(self.observer)
 
@@ -53,8 +53,9 @@ class ProjectBehaviour(unittest.TestCase):
         self.assert_observed('name','new name',self.name)
 
     def test_should_notify_observer_of_status_change(self):
+        old_status = self.project.status
         self.project.status = project.done
-        self.assert_observed_status(project.done)
+        self.assert_observed_status(project.done,old_status)
 
     def create_action_with_status(self,status=action.inactive):
         a = Mock()
@@ -76,10 +77,21 @@ class ProjectBehaviour(unittest.TestCase):
         self.project.add_action(a)
         self.assert_observed('add_action', a)
 
+    def test_should_notify_observers_of_action_status_changes(self):
+        for a in self.project.actions:
+            self.project.action_changed_status(a, action.active)
+            self.assert_observed('changed_action', a, None)
+
+    def test_should_set_added_unprocessed_actions_to_active(self):
+        a = Mock()
+        a.status = action.unprocessed
+        self.project.add_action(a)
+        self.assertEqual(a.status,action.active)
+
     def test_should_be_equal_if_name_and_status_are_identical(self):
         other = Mock()
-        other.name = self.name
-        other.status = self.status
+        other.name = self.project.name
+        other.status = self.project.status
         self.assertTrue(self.project == other)
         self.assertFalse(self.project != other)
         other.name = 'other name'
@@ -88,11 +100,13 @@ class ProjectBehaviour(unittest.TestCase):
     def assert_observed(self,attribute,new=None,old=None):
         calls = self.observer.notify.call_args_list
         self.assertTrue(((self.project,attribute),{'new':new,'old':old}) in calls,
-                        'Expected notification from %s concerning the change of %s from %s to %s\n  Only got these calls:\n%s'%(self.project,attribute,old,new,repr(calls)))
+                        'Expected notification from %s concerning the change of %s from %s to %s\n  Only got these calls:\n%s'%(repr(self.project),repr(attribute),repr(old),repr(new),repr(calls)))
 
-    def assert_observed_status(self,status):
+    def assert_observed_status(self,status,previous_status=None):
+        if not previous_status:
+            previous_status = self.status
         self.assert_status(status)
-        self.assert_observed('status',status,self.status)
+        self.assert_observed('status',status,previous_status)
 
     def assert_status(self,status):
         self.assertEqual(self.project.status,status)
@@ -125,6 +139,15 @@ class ActiveProjectBehaviour(ProjectBehaviour):
             self.project.notify(a,'status',action.done)
         self.assert_observed_status(project.inactive)
 
+    def test_should_deactivate_its_active_actions_on_deactivate(self):
+        active_actions = self.project.actions_with_status(action.active)
+        self.project.deactivate()
+        self.assertEqual(self.project.status,project.inactive)
+        for a in active_actions:
+            self.assertEqual(a.status,action.inactive)
+
+
+
 
 class InactiveProjectBehaviour(ProjectBehaviour):
     def initial_status(self):
@@ -138,6 +161,13 @@ class InactiveProjectBehaviour(ProjectBehaviour):
         self.project.add_action(a)
         self.assertEqual(self.project.status,project.active)
 
+    def test_should_activate_all_inactive_actions_when_activated_itself(self):
+        inactive_actions = self.project.actions_with_status(action.inactive)
+        for a in inactive_actions:
+            self.assertEqual(a.status,action.inactive)
+        self.project.activate()
+        for a in inactive_actions:
+            self.assertEqual(a.status,action.active)
 
 class EmptyProjectBehaviour(InactiveProjectBehaviour):    
 
@@ -169,7 +199,7 @@ class ProjectWithActionsBehaviour(ProjectBehaviour):
 
     def test_should_set_action_to_done_before_removing(self):
         self.project.remove_action(self.actions[0])
-        assert self.actions[0].status == action.done
+        self.assertEqual(self.actions[0].status,action.done)
 
     def test_should_notify_observer_of_removed_actions(self):
         self.project.remove_action(self.actions[0])
@@ -203,6 +233,10 @@ class ProjectWithInactiveActionsBehaviour(ProjectWithActionsBehaviour):
     def test_should_return_no_active_action(self):
         self.assertEqual(self.project.actions_with_status(action.active),[])
 
+
+
+class InactiveProjectWithInactiveActionsBehaviour(ProjectWithInactiveActionsBehaviour,InactiveProjectBehaviour):
+    pass
 
 
 class ProjectWithActiveActionsBehaviour(ProjectWithActionsBehaviour):

@@ -12,6 +12,7 @@ import key_codes
 from new_project_widget import NewProjectWidget
 from new_action_widget import NewActionWidget
 from project_widget import ProjectWidget
+from logic import review_visitor
 
 #from gui import *
 
@@ -53,7 +54,7 @@ class ProjectListView(EditableListView):
         widgets.append(NewProjectWidget(self.projects))
         widgets.append(NewActionWidget())
         self.filtered_list()
-        widgets.extend([ProjectWidget(self.projects,project) for project in self.projects])
+        widgets.extend([ProjectWidget(self.projects,project) for project in self.projects.sorted_by_status()])
         if read_sms:
             from sms_widget import create_sms_widgets
             try:
@@ -65,7 +66,8 @@ class ProjectListView(EditableListView):
 
     def process_all(self):
         appuifw.note(u'Processing all Projects')
-        self.projects.process()
+        reviewer = review_visitor.ReviewVisitor()
+        reviewer.review(self.projects)
         self.redisplay_widgets()
     def reread_projects(self):
         self.projects.reread()

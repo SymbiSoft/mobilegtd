@@ -8,7 +8,7 @@ from gui.gui import EditableListView
 from infos_widget import InfosWidget
 from info_widget import InfoWidget
 from context_widget import ContextWidget
-from action_widget import ActionWidget
+from action_widget import ActionWidget,edit_action
 from action_view import ActionView
 from model import action
 from model import info
@@ -42,10 +42,7 @@ def ask_for_action(project_name,proposition=None):
 #    else:
 #        return parse_action(action_line)
 
-def edit_action(action):
-    f = ActionView(action)
-    f.execute()
-    return f.isSaved() == 1
+
 #    text = u'Enter action'
 #    if info:
 #        text = text+info
