@@ -1,6 +1,12 @@
 from log.logging import logger
 from model.action import *
 import appuifw
+
+def edit_action(action):
+    f = ActionView(action)
+    f.execute()
+    return f.isSaved() == 1
+
 class ActionView( object ):
     
     def __init__( self, action):

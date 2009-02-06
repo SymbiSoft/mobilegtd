@@ -1,13 +1,27 @@
 import re,os
 from model.action import *
 from model.model import WriteableItem
+from model import action
+
+class ActiveActionStatus(ActionStatus):
+	def __init__(self):
+		super(ActiveActionStatus,self).__init__('active',1,u'-')
+	def update(self,a):
+		for o in a.observers:
+			if type(o) == ActionFile:
+				if not o.exists():
+					return action.done
+		return self
+
+active_status = ActiveActionStatus()
+action.active = active_status
+
 
 
 class ActionFile(WriteableItem):
 	def __init__(self,action):
 		self.action = action
 		self.update_methods = {'status':self.update_status,'description':self.update_description,'context':self.set_context}
-		self.update_done_status()
 		self.action.observers.append(self)
 		
 	def notify(self,action,attribute,new=None,old=None):

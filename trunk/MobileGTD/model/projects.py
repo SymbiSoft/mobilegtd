@@ -1,5 +1,5 @@
 from project import Project
-from model import ObservableList
+from observable import ObservableList
 from filtered_list import FilteredList
 #from tickler import TickleDirectory
 #from inout.io import *
@@ -11,9 +11,14 @@ from filtered_list import FilteredList
 #    return lambda x: x.replace(to_strip,'')
 
 class Projects(ObservableList,FilteredList):
+    def __init__(self):
+        super(Projects,self).__init__()
     def with_status(self,status):
         pass
         return self.with_property(lambda p:p.status == status)
+    
+    def sorted_by_status(self):
+        return sorted(self,cmp=lambda x,y:y.status.__cmp__(x.status))
 #    def __init__(self,project_directory):
 #        self.review_directory = project_directory+'@Review/'
 #        self.done_directory = project_directory+'@Done/'

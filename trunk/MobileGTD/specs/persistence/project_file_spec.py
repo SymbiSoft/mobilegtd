@@ -54,6 +54,12 @@ class ProjectFileBehaviour(file_based_spec.FileBasedBehaviour):
         else:
             return os.path.join('@Projects',project_file_name)
 
+    def test_should_create_an_action_file_if_notified_of_added_action(self):
+        a = Mock()
+        a.observers = []
+        a.status = action.inactive
+        self.project_file.notify(self.project, 'add_action', a, None)
+        self.assertTrue(has_added_action_file_as_observer(a))
 
 
 
@@ -135,38 +141,56 @@ class InactiveProjectFileBehaviour(ProjectFileBehaviour,ExistingProjectFileBehav
         return '@Review'
 
 
+
 class ProjectFileReaderBehaviour(ProjectFileBehaviour,ExistingProjectFileBehaviour):
 
     def setUp(self):
         super(ProjectFileReaderBehaviour,self).setUp()
+#        self.project.add_action.side_effect = lambda a:self.project_file.notify(self.project, 'add_action', a, None)
         
     def create_project(self):
-        self.original_project = project.Project('Example Project')
+        self.original_project = self.create_original_project()
         self.original_project.add_info(info.Info('some info'))
-        active_action = action.Action('active action','Online/Google',status=action.unprocessed)
+        active_action = action.Action('active action','Online/Google',status=action.inactive)
         self.original_project.add_action(active_action)
         p_file = ProjectFile(self.original_project)
         self.write(p_file.file_string(),p_file.path())
         return project_file.read(p_file.path())
-        
+
+    def create_original_project(self):
+        return project.Project('Example Project')
+
     def path(self):
         return self.project_file.path()
     
     def test_should_read_the_project_name_correctly(self):
         self.assertEqual(self.project.name,'Example Project')
 
+    def test_should_infer_the_status_from_the_path(self):
+        self.assertEqual(self.project.status,self.original_project.status)
+
     def test_should_read_the_infos_correctly(self):
         self.assertEqual(self.project.infos,[info.Info('some info')])
 
-    def test_should_read_the_actions_correclty(self):
-        a = action.Action('active action','Online/Google',status=action.unprocessed)
+    def test_should_read_the_actions_correctly(self):
+        a = action.Action('active action','Online/Google',status=action.inactive)
         a.project = self.project
         self.assertEqual(self.project.actions,[a])
         
     def test_should_create_action_files_for_all_actions(self):
-        has_action_file=False
         for a in self.project.actions:
-            for o in a.observers:
-                if type(o) == ActionFile and o.action == a:
-                    has_action_file=True
-        self.assertTrue(has_action_file)
+            self.assertTrue(has_added_action_file_as_observer(a))
+
+class DoneProjectFileReaderBehaviour(ProjectFileReaderBehaviour):
+    def create_original_project(self):
+        p = ProjectFileReaderBehaviour.create_original_project(self)
+        p.status = project.done
+        return p
+
+
+def has_added_action_file_as_observer(a):
+    has_action_file=False
+    for o in a.observers:
+        if type(o) == ActionFile and o.action == a:
+            has_action_file=True
+    return has_action_file

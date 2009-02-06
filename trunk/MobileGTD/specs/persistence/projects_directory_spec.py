@@ -2,7 +2,7 @@ import unittest
 from mock import Mock,patch_object,patch
 from persistence.projects_directory import ProjectsDirectory
 from file_based_spec import FileSystemBasedBehaviour
-from model.project import Project
+from model.project import Project,active
 from persistence.project_file import ProjectFile
 from persistence import project_file
 from sets import Set
@@ -21,10 +21,15 @@ class ProjectsDirectoryBehaviour(FileSystemBasedBehaviour):
 
     def assert_project_added(self,project_name):
         calls = self.projects.append.call_args_list
-        self.assertTrue(((Project(project_name),),{}) in calls)
+        self.assertTrue(((Project(project_name,active),),{}) in calls,"Project %s was not created:\n%s"%(repr(Project(project_name)),calls))
 
 #        self.projects.append.assert_called_with(Project(project_name))
-    
+
+    def test_should_register_itself_as_observer(self):
+        self.projects.observers.append.assert_called_with(self.projects_directory)
+
+
+
 class EmptyProjectsDirectoryBehaviour(ProjectsDirectoryBehaviour):
 
     def test_should_not_read_any_projects(self):

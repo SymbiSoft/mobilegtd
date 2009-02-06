@@ -4,8 +4,15 @@ from model import *
 class ActionStatus(Status):
     pass
 
+class UnprocessedStatus(Status):
+    def __init__(self):
+        super(UnprocessedStatus,self).__init__('unprocessed',0)
+    def update(self,owner):
+        return active
 
-unprocessed = ActionStatus('unprocessed',0)
+
+
+unprocessed = UnprocessedStatus()
 active = ActionStatus('active',1,u'-')
 done = ActionStatus('done',2,u'+')
 tickled = ActionStatus('tickled',3,u'/')
@@ -47,11 +54,11 @@ def parse_context(context):
 class Action(ObservableItem,ItemWithStatus):
     def parse(string):
         context,description,info,status  = parse_action_line(string)
-        return Action(description,context,u'',info,status)
+        return Action(description,context,info=info,status=status)
     
     parse = staticmethod(parse)
     
-    def __init__(self,description,context,project=None,info=u'',status=active):
+    def __init__(self,description,context,project=None,info=u'',status=unprocessed):
         super(Action, self).__init__()
         self.project = project
         self.description = description
@@ -67,6 +74,9 @@ class Action(ObservableItem,ItemWithStatus):
     
     def is_not_done(self):
         return self.status in [active,unprocessed,inactive]
+
+    def update_status(self):
+        self.status = self.status.update(self)
         
     def __repr__(self):
         advanced_info = ''
@@ -100,4 +110,4 @@ class Action(ObservableItem,ItemWithStatus):
 
     def summary(self):
         return self.description
-__all__ = ["Action","active","done","tickled","inactive","someday","info","unprocessed","parse_action_line","parse_context"]
+__all__ = ["Action","ActionStatus","active","done","tickled","inactive","someday","info","unprocessed","parse_action_line","parse_context"]
