@@ -96,9 +96,10 @@ class ProjectView(EditableListView):
         return context_actions_map
 
     def add_action(self):
-        action = ask_for_action(self.project.name)
-        if action:
-            self.project.add_action(action)
+        a = ask_for_action(self.project.name)
+        if a:
+            self.project.add_action(a)
+            self.project.status = project.active
     def add_info(self):
         i = ask_for_info(self.project.name)
         if i:

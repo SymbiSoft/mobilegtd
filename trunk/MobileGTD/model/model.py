@@ -1,4 +1,4 @@
-import os,re
+import os,re,sys
 import config.config
 import inout.io
 from inout.io import u_join,write
@@ -91,10 +91,12 @@ class WriteableItem(ObservableItem):
 			os.renames(old_file_name.encode('utf-8'),new_file_name.encode('utf-8'))
 			##logger.log(u'Moved %s to %s'%(repr(old_file_name),repr(new_file_name)))
 			#print u'Moved %s to %s'%(repr(old_file_name),repr(new_file_name))
+			logger.log(u'Moved %s to %s'%(repr(old_file_name),repr(new_file_name)))
 			return new_file_name
-		except OSError:
-			#logger.log(u'Cannot move %s to %s: File already exists'%(repr(old_file_name),repr(new_file_name)))
-			return old_file_name
+		except OSError,e:
+			logger.log(u'Cannot move %s to %s: %s'%(repr(old_file_name),repr(new_file_name),e.strerror))
+			raise e
+
 		
 	def directory(self):
 		return os.path.dirname(self.encoded_path())

@@ -30,17 +30,13 @@ class ReviewVisitorBehaviour(unittest.TestCase):
     
     def create_project(self):
         p = Mock()
+        p.status.update.return_value = p.status
         p.last_modification_date.return_value = datetime.datetime.now()
-        p.update_status.side_effect = lambda:self.update_status(p)
         return p
-    def update_status(self,p):
-        if not type(p.status) == Mock:
-            p.status = p.status.update(p)
 
     def create_action(self):
         a = Mock(spec=action.Action)
         a.status = action.unprocessed
-        a.update_status.side_effect = lambda:self.update_status(a)
         return a
         
 
@@ -52,10 +48,6 @@ class ReviewVisitorBehaviour(unittest.TestCase):
     def review(self):
         self.reviewer.review(self.projects)
 
-    def test_should_call_update_status_on_all_actions(self):
-        self.review()
-        for a in self.project1.actions + self.project2.actions:
-            a.update_status.assert_called_with()
     
     
     def test_should_set_all_unprocessed_actions_to_active(self):
@@ -69,39 +61,6 @@ class ReviewVisitorBehaviour(unittest.TestCase):
         for a in self.negative_property_actions:
             self.assertNotEqual(a.status,action.active)
 
-#    @patch('model.action.active')
-#    def test_should_set_the_transition_policy_of_the_action_active_status(self,mocked_status):
-#        self.review()
-#        self.assertEqual(mocked_status.transition_policy,review_visitor.active_action_without_file_to_done_policy)
-
-#    def test_should_set_actions_without_existing_file_to_done(self):
-#        self.project1.actions_with_status.return_value = self.positive_property_actions[:7]
-#        self.project1.actions = self.project1.actions_with_status()+self.negative_property_actions[:1]
-#        self.project2.actions_with_status.return_value = self.positive_property_actions[7:]
-#        self.project2.actions = self.project2.actions_with_status()+self.negative_property_actions[1:]
-#
-#
-#        for a in self.positive_property_actions:
-#            a.status = action.active
-#            a_file = Mock()
-#            a_file.exists.return_value = False
-#            a.observers = [a_file]
-#            
-#        for a in self.negative_property_actions:
-#            a.status = action.active
-#            a_file = Mock()
-#            a_file.exists.return_value = True
-#            a.observers = [a_file]
-#        
-#        self.review()
-        
-#        for a in self.positive_property_actions:
-#            self.assertEqual(a.status,action.done)
-#        
-#        for a in self.negative_property_actions:
-#            self.assertEqual(a.status, action.active)
-
-        
     
     def test_should_untickle_projects_with_tickle_date_present_or_past(self):
         self.project1.status = project.Tickled(datetime.date.now())

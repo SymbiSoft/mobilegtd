@@ -79,9 +79,11 @@ class Configuration(odict):
 
 
 COMMON_CONFIG = Configuration(main_config_file,default_configuration)
+ABBREVIATIONS =  {} #Configuration("abbreviations.cfg",default_abbreviations)
 
-
-
+def read_configurations():
+    global ABBREVIATIONS
+    ABBREVIATIONS = Configuration("abbreviations.cfg",default_abbreviations)
 
 gtd_directory = COMMON_CONFIG['path']
 inactivity_threshold = int(COMMON_CONFIG['inactivity_threshold'])

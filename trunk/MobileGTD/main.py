@@ -9,34 +9,21 @@
 def run():
     try:
         e32.ao_yield()
-        #appuifw.note(u'Vor Imports')
-        #display(sys.path)
         import sys,os
-    #    pathname = os.path.dirname(sys.argv[0]) 
-    #    print pathname
-    #    print os.getcwd()  
-    #    for package in ['model','gui','config','io','logging']:
-    #        sys.path.append(os.path.abspath(pathname+'/'+package))
-        
-    #    print sys.path
     
         import config.config, config.defaultconfig
-#        print "First imports done"
-        
         import gui.gui
         from model.projects import Projects
         from gui.projects_list.project_list_view import ProjectListView
-#        print "Second imports done"
         import inout.io
-#        print "Third imports done"
         from persistence.projects_directory import ProjectsDirectory
-#        print "Fourth imports done"
     
         directory = os.path.join(config.config.gtd_directory,'@Projects')
-        #import appswitch
 
         projects = Projects()
-        projects_directory = ProjectsDirectory(projects, directory)
+        projects_directory = ProjectsDirectory(projects)
+        projects_directory.add_directory(directory)
+        projects_directory.add_directory(os.path.join(directory,'@Review'))
         projects_directory.read()
 #        projects.process()
         projects_view = ProjectListView(projects)
@@ -83,7 +70,9 @@ if __name__ == "__main__":
     
     lock=None
     
-    from config.config import gtd_directory
+    from config.config import gtd_directory,read_configurations
+    read_configurations()
+
     from inout.io import safe_chdir
     safe_chdir(gtd_directory)
     print os.getcwd() 

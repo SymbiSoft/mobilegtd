@@ -42,7 +42,7 @@ class ActionView( object ):
         if len(self.get_info().strip()) > 0:
             info = self.get_info()
         else:
-            info = ""
+            info = u""
         self.action.context = context
         self.action.description = description
         self.action.info = info

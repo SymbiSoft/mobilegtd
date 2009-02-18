@@ -1,28 +1,29 @@
 import re
 from model import *
+import config.config as config
 
 class ActionStatus(Status):
     pass
 
 class UnprocessedStatus(Status):
     def __init__(self):
-        super(UnprocessedStatus,self).__init__('unprocessed',0)
+        super(UnprocessedStatus,self).__init__(u'unprocessed',0)
     def update(self,owner):
         return active
 
 
 
 unprocessed = UnprocessedStatus()
-active = ActionStatus('active',1,u'-')
-done = ActionStatus('done',2,u'+')
-tickled = ActionStatus('tickled',3,u'/')
-inactive = ActionStatus('inactive',4,u'!')
-someday = ActionStatus('someday',5,u'~')
-info = ActionStatus('info',0)
+active = ActionStatus(u'active',1,u'-')
+done = ActionStatus(u'done',2,u'+')
+tickled = ActionStatus(u'tickled',3,u'/')
+inactive = ActionStatus(u'inactive',4,u'!')
+someday = ActionStatus(u'someday',5,u'~')
+info = ActionStatus(u'info',0)
 
 action_regexp = re.compile('(?P<status>[+-/!])?\s*(?P<context>\S*)\s*(?P<description>[^\(]*)(\((?P<info>[^\)]*))?',re.U)
 context_regexp = re.compile('(?P<numbers>\d*)(?P<text>\D?.*)',re.U)
-ABBREVIATIONS = {} # Configuration("abbreviations.cfg",default_abbreviations)
+
 
 def parse_action_line(string):
     matching = action_regexp.match(string)
@@ -42,13 +43,15 @@ def parse_context(context):
     context_matching = context_regexp.match(context)
     context_numbers = context_matching.group('numbers')
     context_text = context_matching.group('text')
-    if(context_numbers in ABBREVIATIONS):
-        context=(unicode(ABBREVIATIONS[context_numbers])+context_text).rstrip(u'/')
+    if(context_numbers in config.ABBREVIATIONS):
+        context=(unicode(config.ABBREVIATIONS[context_numbers])+context_text).rstrip(u'/')
     else:
         context=context_text
     if (len(context)<2):
         context = u'None'
     return context
+
+
 
 
 class Action(ObservableItem,ItemWithStatus):
@@ -74,12 +77,9 @@ class Action(ObservableItem,ItemWithStatus):
     
     def is_not_done(self):
         return self.status in [active,unprocessed,inactive]
-
-    def update_status(self):
-        self.status = self.status.update(self)
         
     def __repr__(self):
-        advanced_info = ''
+        advanced_info = u''
         if self.project:
             advanced_info = advanced_info+' Project: '+str(self.project)
         if len(self.info) > 0:
@@ -89,7 +89,7 @@ class Action(ObservableItem,ItemWithStatus):
         return repr(self.description)+' @'+repr(self.context)+repr(advanced_info)
     
     def project_file_string(self,entry_separator=' '):
-        return ('%s%s'%(self.status_symbol(),self.context_description_info())).strip()
+        return (u'%s%s'%(self.status_symbol(),self.context_description_info())).strip()
     
     def context_description_info(self,entry_separator=' '):
         return u'%s%s%s%s%s'%(\
@@ -104,7 +104,7 @@ class Action(ObservableItem,ItemWithStatus):
         return info_string
 
     def __str__(self):
-        return u'  %s %s'%(self.status_symbol(),self.description)
+        return self.project_file_string()
     def __cmp__(self,other):
         return self.status.__cmp__(other.status)
 
