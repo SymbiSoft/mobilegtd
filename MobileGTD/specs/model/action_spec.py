@@ -36,7 +36,7 @@ class ActionBehaviour(unittest.TestCase):
 		self.observer.notify.assert_called_with(self.action,'description',new='newea',old='oldey')
 
 	def test_should_notify_observers_when_status_changes(self):
-		self.action.update_status()
+		self.action.status = action.active
 		self.observer.notify.assert_called_with(self.action,'status',new=action.active,old=action.unprocessed)
 		
 

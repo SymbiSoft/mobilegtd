@@ -4,7 +4,7 @@ sys.path.append(os.path.abspath(os.path.join(os.getcwd(),'..','..','..')))
 import file_based_spec
 import persistence.action_file
 #from model.model import *
-from model.action import *
+#from model.action import *
 from model import action
 
 
@@ -15,7 +15,7 @@ class ActionFileBasedBehaviour(file_based_spec.FileBasedBehaviour):
         super(ActionFileBasedBehaviour,self).setUp()
         self.context = 'context/sub_context'
         self.description = 'some action'
-        self.action = Action(self.description, self.context)
+        self.action = action.Action(self.description, self.context)
         self.action_file()
 
     def action_file(self):
@@ -34,14 +34,14 @@ class ActiveActionFileBehaviour(ActionFileBasedBehaviour):
 
     def setUp(self):
         super(ActiveActionFileBehaviour,self).setUp()
-        self.action.status = active
+        self.action.status = action.active
 
     def test_should_remove_the_file_when_action_is_set_to_done(self):
-        self.action.status = done
+        self.action.status = action.done
         assert not os.path.isfile(self.path())
 
     def test_should_remove_the_file_when_action_is_set_to_inactive(self):
-        self.action.status = inactive
+        self.action.status = action.inactive
         assert not os.path.isfile(self.path())
 
     def test_should_rename_the_file_when_description_is_changed(self):
@@ -68,8 +68,7 @@ class ActiveActionFileBehaviour(ActionFileBasedBehaviour):
 
     def test_should_set_action_status_to_done_on_update_if_file_does_not_exist(self):
         self.action_file.remove()
-        self.action.update_status()
-        self.assertEqual(self.action.status,action.done)
+        self.assertEqual(self.action.status.update(self.action),action.done)
 
 
 def generate_test_for_write_on_change_notification(field):
@@ -91,13 +90,13 @@ class UnprocessedActionFileBehaviour(ActionFileBasedBehaviour):
 
     def setUp(self):
         super(UnprocessedActionFileBehaviour,self).setUp()
-        self.action.status = unprocessed
+        self.action.status = action.unprocessed
 
     def test_should_not_have_created_a_file(self):
         assert not os.path.isfile(self.path())    	
        
     def test_should_create_a_file_when_action_is_set_active(self):
-        self.action.status = active
+        self.action.status = action.active
         assert os.path.isfile(self.path())
                 
     def test_should_not_create_the_file_when_description_is_changed(self):
@@ -126,28 +125,24 @@ class ActiveDeletedActionFileBehaviour(ActionFileBasedBehaviour):
     
     def setUp(self):
         super(ActiveDeletedActionFileBehaviour,self).setUp()
-        self.action.status = active
+        self.action.status = action.active
 #        os.remove(self.path())
         ActionFileBasedBehaviour.action_file(self)
 
     def action_file(self):
         pass
 
-    def test_should_set_action_to_done_if_file_does_not_exist(self):
-#        self.action_file.update_done_status()
-        assert self.action.status == done
-
 
 class DoneActionFileBehaviour(UnprocessedActionFileBehaviour):
     
     def setUp(self):
         super(DoneActionFileBehaviour,self).setUp()
-        self.action.status = done
+        self.action.status = action.done
 
 
     
 class InactiveActionFileBehaviour(UnprocessedActionFileBehaviour):
     def setUp(self):
         super(InactiveActionFileBehaviour,self).setUp()
-        self.action.status = inactive
+        self.action.status = action.inactive
 

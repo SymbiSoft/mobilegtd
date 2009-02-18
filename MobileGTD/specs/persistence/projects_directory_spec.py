@@ -11,7 +11,10 @@ class ProjectsDirectoryBehaviour(FileSystemBasedBehaviour):
     def setUp(self):
         super(ProjectsDirectoryBehaviour,self).setUp()
         self.projects = Mock()
-        self.projects_directory = ProjectsDirectory(self.projects,'.')
+        self.project_list = []
+        self.projects.__iter__ = self.project_list.__iter__
+        self.projects_directory = ProjectsDirectory(self.projects)
+        self.projects_directory.add_directory('.')
 
     def create_project_file(self,name,subdir=None):
         file_name = name+'.prj'
@@ -28,12 +31,15 @@ class ProjectsDirectoryBehaviour(FileSystemBasedBehaviour):
     def test_should_register_itself_as_observer(self):
         self.projects.observers.append.assert_called_with(self.projects_directory)
 
+    def read(self):
+        self.projects_directory.read()
+        
 
 
 class EmptyProjectsDirectoryBehaviour(ProjectsDirectoryBehaviour):
 
     def test_should_not_read_any_projects(self):
-        self.projects_directory.read()
+        self.read()
         self.assertFalse(self.projects.append.called)
 
 
@@ -51,13 +57,13 @@ class NonEmptyProjectsDirectoryBehaviour(ProjectsDirectoryBehaviour):
             self.create_project_file(name)
 
     def test_should_read_all_projects_in_this_directory(self):
-        self.projects_directory.read()
+        self.read()
         for p in self.project_names:
             self.assert_project_added(p)
 
     def test_should_read_only_project_files(self):
         self.create_file('First something.txt')
-        self.projects_directory.read()
+        self.read()
         self.assertEqual(len(self.projects.append.call_args_list),len(self.project_names))
         self.assertFalse(((Project('First something.txt'),),{}) in self.projects.append.call_args_list)
 
@@ -70,26 +76,28 @@ class NonEmptyProjectsDirectoryBehaviour(ProjectsDirectoryBehaviour):
                 has_project_file = True
         return has_project_file
 
-#    def mock_notify(self,p):
-#        self.projects_directory.notify(self.projects, 'add_project', p, None)
     def test_should_add_read_projects_to_projects(self):
 #        self.projects.append.side_effect = self.mock_notify
-        self.projects_directory.read()
+        self.read()
         read_project_names = Set()
         for call in self.projects.append.call_args_list:
             read_project_names.add(call[0][0].name)
-#            read_project_names.sort()
-#            self.project_names.sort()
         self.assertEqual(read_project_names,self.project_names)
+
+    def test_should_clear_the_projects_before_reading(self):
+        self.read()
+        self.read()
+        self.assertEqual(len(self.projects.pop.call_args_list),len(self.project_names))
 
     def test_should_create_project_files_when_notified_of_added_projects(self):
         p = Mock()
         p.observers = []
-        self.projects_directory.notify(self.projects,'add_project',p, None)
+        self.projects_directory.notify(self.projects,'add_item',p, None)
         self.assertTrue(self.has_project_file(p),"Should have registered ProjectFile on 'add_project' notification")
 
     @patch('persistence.project_file.read')
     def test_should_make_the_project_file_read_the_file_contents(self,read_method):
-        self.projects_directory.read()
+        read_method.return_value=(None,[],[])
+        self.read()
         self.assertEqual(len(read_method.call_args_list),len(self.project_names))
         

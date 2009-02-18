@@ -105,6 +105,10 @@ def restore_gui(object):
 class ListView(object):
     def __init__(self,title):
         self.title = title
+        self.view = appuifw.Listbox(self.items(),self.change_entry)
+    
+    def change_entry(self):
+        pass
     
     def run(self):
         self.adjustment = None
@@ -145,13 +149,22 @@ class ListView(object):
     def refresh(self):
         appuifw.app.menu=self.get_menu_entries()
 
+    def set_index(self,index):
+        if index > len(self.widgets):
+            index = len(self.widgets)
+        if index < 0:
+            index = 0
+        self.view.set_list(self.items(),index)
+
+    def selected_index(self):
+        return self.view.current()
+
 
 class WidgetBasedListView(ListView):
     def __init__(self,title):
+        self.widgets = self.generate_widgets()
         super(WidgetBasedListView,self).__init__(title)
         self.exit_flag = False
-        self.widgets = self.generate_widgets()
-        self.view = appuifw.Listbox(self.all_widget_entries(),self.change_entry)
 
     def run(self):
         self.refresh()
@@ -166,17 +179,11 @@ class WidgetBasedListView(ListView):
         super(WidgetBasedListView,self).refresh()
     def redisplay_widgets(self):
         self.set_index(self.selected_index())
-    def set_index(self,index):
-        if index > len(self.widgets):
-            index = len(self.widgets)
-        self.view.set_list(self.all_widget_entries(),index)
-    def all_widget_entries(self):
+    def items(self):
         return self.all_widget_texts()
     def all_widget_texts(self):
         return [entry.list_repr() for entry in self.widgets]
 
-    def selected_index(self):
-        return self.view.current()
     
 
     def current_widget(self):
@@ -226,7 +233,7 @@ class SearchableListView(WidgetBasedListView):
         selected_item = appuifw.selection_list(self.all_widget_texts(),search_field=1)
         if selected_item == None or selected_item == -1:
             selected_item = self.selected_index()
-        self.view.set_list(self.all_widget_entries(),selected_item)
+        self.view.set_list(self.items(),selected_item)
         self.set_bindings_for_selection(selected_item)
     def switch_entry_filter(self):
         self.current_entry_filter_index += 1

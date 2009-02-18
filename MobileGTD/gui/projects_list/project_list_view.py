@@ -65,9 +65,7 @@ class ProjectListView(EditableListView):
         return widgets
 
     def process_all(self):
-        appuifw.note(u'Processing all Projects')
-        reviewer = review_visitor.ReviewVisitor()
-        reviewer.review(self.projects)
+        review_visitor.reviewer.review(self.projects)
         self.redisplay_widgets()
     def reread_projects(self):
         self.projects.reread()

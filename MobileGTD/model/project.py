@@ -6,6 +6,9 @@ import action
 from observable import *
 from filtered_list import FilteredList,StatusFilteredList
 import datetime
+from log.logging import logger
+import sys
+
 class ProjectStatus(Status):
     pass
 
@@ -13,12 +16,12 @@ class ProjectStatus(Status):
 #        return False
 class Inactive(ProjectStatus):
     def __init__(self):
-        super(Inactive,self).__init__('review',4,'o')
+        super(Inactive,self).__init__('review',4,'!')
 
     def update(self,project):
-        if project.has_active_actions():
-            #print repr(active)
-            return active
+#        if project.has_active_actions():
+#            #print repr(active)
+#            return active
         return self
 
 
@@ -64,13 +67,12 @@ info = ProjectStatus('info',0)
 
 class Project(ObservableItem,ItemWithStatus):
     observers = []
-    def __init__(self,name,status = inactive,actions=[],infos=[]):
+    def __init__(self,name,status = inactive):
+        logger.log(u'Creating project %s (%s)'%(name,status))
         ItemWithStatus.__init__(self,status)
         self.name=name
         self.actions=StatusFilteredList([])
-        for a in actions:
-            self.add_action(a)
-        self.infos=FilteredList(infos)
+        self.infos=FilteredList([])
         self.update_methods = {'status':self.action_changed_status,
                                'description':self.action_changed_content,
                                'info':self.action_changed_content,
@@ -79,6 +81,7 @@ class Project(ObservableItem,ItemWithStatus):
         super(Project,self).__init__()
         for o in Project.observers:
             o.notify(self.__class__,'new_project',self,None)
+        logger.log(u'Now, its project %s (%s)'%(name,status))
 
 
     def add_action(self,a):
@@ -88,14 +91,12 @@ class Project(ObservableItem,ItemWithStatus):
         self.notify_observers('add_action',a)
         if a.status == action.unprocessed:
             a.status = action.active
-        self.update_status()
         
     def remove_action(self,a):
         a.status = action.done
         a.observers.remove(self)
         self.actions.remove(a)
         self.notify_observers('remove_action',a)
-        self.update_status()
 
     def add_info(self,info,position=None):
         info.observers.append(self)
@@ -135,15 +136,9 @@ class Project(ObservableItem,ItemWithStatus):
     def action_changed_content(self,action,content):
         self.notify_observers('changed_action',action)
         
-    def update_status(self):
-        o = self.status
-        new_status = self.status.update(self)
-        if o != new_status:
-            self.status = new_status 
     
     def action_changed_status(self,a,status):
         self.notify_observers('changed_action', new=a, old=None)
-        self.update_status()
         
     def last_modification_date(self):
         return datetime.date.now()
