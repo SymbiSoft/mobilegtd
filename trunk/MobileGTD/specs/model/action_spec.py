@@ -20,7 +20,7 @@ class UnprocessedStatusBehaviour(unittest.TestCase):
 class ActionBehaviour(unittest.TestCase):
 
 	def setUp(self):
-		self.action = model.action.Action('oldey','some_context')
+		self.action = model.action.Action(u'oldey',u'some_context')
 		self.observer = Mock()
 		self.action.observers.append(self.observer)
 
@@ -28,11 +28,11 @@ class ActionBehaviour(unittest.TestCase):
 		self.assertEqual(self.action.status,action.unprocessed)
 
 	def test_should_have_new_field_value_when_set(self):
-		self.action.description='newey'
-		assert self.action.description == 'newey'
+		self.action.description=u'newey'
+		assert self.action.description == u'newey'
 
 	def test_should_notify_observers_when_field_is_changed_externally(self):
-		self.action.description='newea'
+		self.action.description=u'newea'
 		self.observer.notify.assert_called_with(self.action,'description',new='newea',old='oldey')
 
 	def test_should_notify_observers_when_status_changes(self):
@@ -44,9 +44,9 @@ class ActionBehaviour(unittest.TestCase):
 class ActionParseBehaviour(unittest.TestCase):
 	
 	def setUp(self):
-		self.description = 'some action'
-		self.context = 'context/sub_context'
-		self.info = 'additional stuff'
+		self.description = u'some action'
+		self.context = u'context/sub_context'
+		self.info = u'additional stuff'
 		self.status_string = '-'
 		self.action = model.action.Action.parse(u'%s %s %s (%s)'%(self.status_string,self.context,self.description,self.info))
 		

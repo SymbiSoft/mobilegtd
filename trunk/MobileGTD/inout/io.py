@@ -1,4 +1,4 @@
-import os
+import os,sys
 
 
 def create_dir_if_necessary(path):
@@ -7,7 +7,7 @@ def create_dir_if_necessary(path):
 
 def safe_chdir(path):
     #try:
-    #    path = path_unicode.encode('utf-8')
+    #    path = os_encode(path_unicode)
     #except UnicodeError:
     #    #logger.log('Error decoding path %s'%repr(path_unicode))
     #    print 'Error decoding path %s'%repr(path_unicode)
@@ -16,28 +16,39 @@ def safe_chdir(path):
     os.chdir(path)
 
 def create_file(file_path):
-	dir = os.path.dirname(file_path.encode('utf-8'))
-	create_dir_if_necessary(dir)
-	file_name = os.path.join(dir,os.path.basename(file_path.encode('utf-8')))
-	
-	f = file(file_name,'w')
-	return f
+    dir = os.path.dirname(os_encode(file_path))
+    create_dir_if_necessary(dir)
+    encoded_file_path = os_encode(file_path)
+    file_name = os.path.join(dir,os.path.basename(encoded_file_path))
 
+    f = file(file_name,'w')
+    return f
+
+
+def os_encode(s):
+    return s.encode(sys.getfilesystemencoding())
+
+def os_decode(s):
+    if type(s) == unicode:
+        return s
+    else:
+        return unicode(s,sys.getfilesystemencoding())
 
 def write(file_path,content):
     f = create_file(file_path)
-    f.write(content.encode('utf-8'))
+    f.write(os_encode(content))
     f.close()
     from log.logging import logger
     logger.log(u'Wrote %s to %s'%(content,os.path.abspath(file_path)))    
 
 def list_dir(root,recursive=False,filter=None):
-    if not os.path.exists(root.encode('utf-8')):
+    encoded_root = os_encode(root)
+    if not os.path.exists(encoded_root):
         return []
     all_files_and_dirs = []
-    for name in os.listdir(root.encode('utf-8')):
-        file_name = u_join(root,name.decode('utf-8'))
-        if recursive and os.path.isdir(file_name.encode('utf-8')):
+    for name in os.listdir(encoded_root):
+        file_name = os_decode(os.path.join(encoded_root,name))
+        if recursive and os.path.isdir(os_encode(file_name)):
             all_files_and_dirs.extend(list_dir(file_name, True,filter))
         if (not filter) or filter(file_name):
             all_files_and_dirs.append(file_name)
@@ -68,14 +79,10 @@ def guess_encoding(data):
         return (decoded, successful_encoding)
 
 
-def u_join(father,son):
-    return u'%s/%s'%(father,son)
-
-
 def read_text_from_file(unicode_file_name):
     from log.logging import logger
-    file_name = unicode_file_name.encode('utf-8')
-    logger.log("Reading from %s"%os.path.abspath(file_name))
+    file_name = os_encode(unicode_file_name)
+#    logger.log(u'Reading from %s'%os.path.abspath(file_name).decode('utf-8'))
     f=file(file_name,'r')
     raw=f.read()
     f.close()
@@ -87,4 +94,4 @@ def parse_file_to_line_list(unicode_complete_path):
     lines = text.splitlines()
     return lines
 def is_dir(unicode_path):
-    return os.path.isdir(unicode_path.encode('utf-8'))
+    return os.path.isdir(os_encode(unicode_path))

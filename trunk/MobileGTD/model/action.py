@@ -56,6 +56,7 @@ def parse_context(context):
 
 class Action(ObservableItem,ItemWithStatus):
     def parse(string):
+        assert type(string) == unicode
         context,description,info,status  = parse_action_line(string)
         return Action(description,context,info=info,status=status)
     
@@ -64,6 +65,10 @@ class Action(ObservableItem,ItemWithStatus):
     def __init__(self,description,context,project=None,info=u'',status=unprocessed):
         super(Action, self).__init__()
         self.project = project
+        assert type(description) == unicode
+        assert type(context) == unicode
+        assert type(info) == unicode
+        
         self.description = description
         self.context = context
         self.info = info

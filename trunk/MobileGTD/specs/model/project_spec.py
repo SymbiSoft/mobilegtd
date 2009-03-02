@@ -14,13 +14,13 @@ class ProjectClassBehaviour(unittest.TestCase):
         self.p_class.observers.append(self.observer)
     
     def test_should_inform_listeners_of_project_creation(self):
-        p = Project('Test')
+        p = Project(u'Test')
         self.assertTrue(self.observer.notify.called)
 
 class ProjectBehaviour(unittest.TestCase):
 
     def setUp(self):
-        self.name = 'my project'
+        self.name = u'my project'
         self.status = self.initial_status()
         self.actions = self.initial_actions()
         self.infos = self.initial_infos()

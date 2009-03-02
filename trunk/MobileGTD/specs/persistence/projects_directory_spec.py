@@ -1,3 +1,4 @@
+# coding: utf-8
 import unittest
 from mock import Mock,patch_object,patch
 from persistence.projects_directory import ProjectsDirectory
@@ -24,8 +25,7 @@ class ProjectsDirectoryBehaviour(FileSystemBasedBehaviour):
 
     def assert_project_added(self,project_name):
         calls = self.projects.append.call_args_list
-        self.assertTrue(((Project(project_name,active),),{}) in calls,"Project %s was not created:\n%s"%(repr(Project(project_name)),calls))
-
+        self.assertTrue(((Project(project_name,active),),{}) in calls,u"Project %s was not created:\n%s"%(repr(Project(project_name)),calls))
 #        self.projects.append.assert_called_with(Project(project_name))
 
     def test_should_register_itself_as_observer(self):
@@ -48,7 +48,7 @@ class NonEmptyProjectsDirectoryBehaviour(ProjectsDirectoryBehaviour):
 
     def setUp(self):
         super(NonEmptyProjectsDirectoryBehaviour,self).setUp()
-        self.project_names = Set(['First Project','other project','third something'])
+        self.project_names = Set([u'Fürst Project',u'other project',u'third something'])
         self.create_project_files(self.project_names)
 
     
@@ -65,7 +65,7 @@ class NonEmptyProjectsDirectoryBehaviour(ProjectsDirectoryBehaviour):
         self.create_file('First something.txt')
         self.read()
         self.assertEqual(len(self.projects.append.call_args_list),len(self.project_names))
-        self.assertFalse(((Project('First something.txt'),),{}) in self.projects.append.call_args_list)
+        self.assertFalse(((Project(u'First something.txt'),),{}) in self.projects.append.call_args_list)
 
     def has_project_file(self,p):
         has_project_file = False
@@ -89,11 +89,20 @@ class NonEmptyProjectsDirectoryBehaviour(ProjectsDirectoryBehaviour):
         self.read()
         self.assertEqual(len(self.projects.pop.call_args_list),len(self.project_names))
 
-    def test_should_create_project_files_when_notified_of_added_projects(self):
+    @patch('persistence.project_file.ProjectFile')
+    def test_should_create_project_files_when_notified_of_added_projects(self,project_file_constructor):
+        p = self.create_and_notify_of_new_project()
+        project_file_constructor.assert_called_with(p)
+
+    @patch('persistence.project_file.ProjectFile')
+    def test_should_immediately_write_added_project_files(self,project_file_constructor):
+        self.create_and_notify_of_new_project()
+        project_file_constructor().write.assert_called_with()
+
+    def create_and_notify_of_new_project(self):
         p = Mock()
-        p.observers = []
         self.projects_directory.notify(self.projects,'add_item',p, None)
-        self.assertTrue(self.has_project_file(p),"Should have registered ProjectFile on 'add_project' notification")
+        return p 
 
     @patch('persistence.project_file.read')
     def test_should_make_the_project_file_read_the_file_contents(self,read_method):

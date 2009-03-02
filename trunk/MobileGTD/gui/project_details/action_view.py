@@ -58,15 +58,15 @@ class ActionView( object ):
         return self.saved
  
     def get_description( self ):
-        return self.form[1][2]
+        return unicode(self.form[1][2])
  
  
 
     def get_context( self ):
-        return self.form[0][2]
+        return unicode(self.form[0][2])
     def is_valid(self):
         return len(self.form[0]) > 2 and len(self.form[1]) > 2
  
 
     def get_info( self ):
-        return self.form[2][2]
+        return unicode(self.form[2][2])

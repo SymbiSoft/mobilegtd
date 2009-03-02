@@ -1,13 +1,14 @@
 import os,re,sys
 import config.config
 import inout.io
-from inout.io import u_join,write
+from inout.io import write
 
 from time import *
 from observable import *
 from log.logging import logger
 from config.config import *
 from inout.io import *
+from inout import io
 #logger.log(u'new version')
 
 
@@ -88,7 +89,7 @@ class WriteableItem(ObservableItem):
 			old_dir = self.directory()
 		old_file_name = os.path.join(old_dir,self.file_name())
 		try:
-			os.renames(old_file_name.encode('utf-8'),new_file_name.encode('utf-8'))
+			os.renames(io.os_encode(old_file_name),io.os_encode(new_file_name))
 			##logger.log(u'Moved %s to %s'%(repr(old_file_name),repr(new_file_name)))
 			#print u'Moved %s to %s'%(repr(old_file_name),repr(new_file_name))
 			logger.log(u'Moved %s to %s'%(repr(old_file_name),repr(new_file_name)))
@@ -99,34 +100,34 @@ class WriteableItem(ObservableItem):
 
 		
 	def directory(self):
-		return os.path.dirname(self.encoded_path())
+		return io.os_decode(os.path.dirname(self.encoded_path()))
 	def file_name(self):
-		return os.path.basename(self.encoded_path())
+		return io.os_decode(os.path.basename(self.encoded_path()))
 	def remove(self,path=None):
 		if not path:
 			encoded_path = self.encoded_path()
 		else:
-			encoded_path = path.encode('utf-8')
+			encoded_path = io.os_encode(path)
 		if os.path.isfile(encoded_path):
 			os.remove(encoded_path)
 	def exists(self):
 		return os.path.isfile(self.encoded_path())
 
 	def encoded_path(self):
-		return self.path().encode('utf-8')
+		return io.os_encode(self.path())
 
 	def extension(self):
 		return os.path.splitext(self.encoded_path())[1]
 	def rename(self,new_name,old=None):
 		if not old:
-			old = os.path.splitext(os.path.basename(self.encoded_path()))[0]
-		
-		
-		new_file_name = os.path.join(self.directory(),new_name+self.extension())
-		old_file_name = os.path.join(self.directory(),old+self.extension())
+			old = io.os_decode(os.path.splitext(os.path.basename(self.encoded_path()))[0])		
+		directory = io.os_encode(self.directory())
+		extension = io.os_encode(self.extension())
+		old_filename_encoded = io.os_encode(old)
+		new_file_name = os.path.join(directory,io.os_encode(new_name)+extension)
+		old_file_name = os.path.join(directory,old_filename_encoded+extension)
 		#logger.log(u'Renaming %s to %s'%(old_file_name,new_file_name))
-		#print(u'Renaming %s to %s'%(old_file_name,new_file_name))
-		os.renames(old_file_name,new_file_name.encode('utf-8'))
+		os.renames(old_file_name,new_file_name)
 
 	def notify(self,action,attribute,new=None,old=None):
 		self.write()

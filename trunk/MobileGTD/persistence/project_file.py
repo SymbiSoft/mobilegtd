@@ -1,5 +1,6 @@
 import re,os,traceback
 from inout.io import parse_file_to_line_list
+from inout import io
 from model.project import *
 from model.model import invert_dictionary,WriteableItem
 from action_file import ActionFile
@@ -9,18 +10,10 @@ from action_file import ActionFile
 projects_dir = '@Projects'
 
 def project_name(file_name):
-    return unicode(os.path.splitext(os.path.basename(file_name))[0])
+    encoded_filename = io.os_encode(file_name)
+    return io.os_decode(os.path.splitext(os.path.basename(encoded_filename))[0])
 
 
-class ProjectFileCreator(object):
-    
-    def notify(self,project_class,attribute,new=None,old=None):
-        ProjectFile(new)
-    
-    def __eq__(self,other):
-        return type(other) == ProjectFileCreator
-
-#Project.observers.append(ProjectFileCreator())
 
 
 def status_for_dir(dir_name):
