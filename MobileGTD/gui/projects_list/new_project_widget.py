@@ -1,4 +1,5 @@
 import appuifw
+from log.logging import logger
 from project_widget import ProjectWidget
 from model.project import Project
 from model.info import Info
@@ -6,7 +7,8 @@ class NewProjectWidget:
     def __init__(self,projects):
         self.projects = projects
     def change(self,proposed_name = 'Project name',infos=None):
-        project_name = appuifw.query(u'Enter a name for the project','text',proposed_name)
+        project_name = unicode(appuifw.query(u'Enter a name for the project','text',proposed_name))
+        logger.log(u'New project: %s'% project_name)
         if not project_name:
             return
         project = Project(project_name)

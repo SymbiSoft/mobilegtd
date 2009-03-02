@@ -12,6 +12,7 @@ from action_widget import ActionWidget,edit_action
 from action_view import ActionView
 from model import action
 from model import info
+from model import project
 from model.action import Action
 from log.logging import logger
 from e32 import Ao_lock, in_emulator
@@ -66,6 +67,8 @@ class ProjectView(EditableListView):
 
     def exit(self):
         self.project.observers.remove(self)
+#        self.project.status = project.active
+#        self.project.status.update(self.project)
         EditableListView.exit(self)
 #        self.project.dirty = True
 #        self.project.write()
@@ -85,7 +88,7 @@ class ProjectView(EditableListView):
         for (context,actions) in self.actions_by_context().items():
             widgets.append(ContextWidget(context,self.project))
             for action in actions:
-                widgets.append(ActionWidget(action,self.project))
+                widgets.append(ActionWidget(action))
         return widgets
     def actions_by_context(self):
         context_actions_map = {}

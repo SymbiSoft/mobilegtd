@@ -16,7 +16,7 @@ class ProjectStatus(Status):
 #        return False
 class Inactive(ProjectStatus):
     def __init__(self):
-        super(Inactive,self).__init__('review',4,'!')
+        super(Inactive,self).__init__(u'review',4,'!')
 
     def update(self,project):
 #        if project.has_active_actions():
@@ -29,7 +29,7 @@ class Inactive(ProjectStatus):
 class Active(ProjectStatus):
     
     def __init__(self):
-        super(Active,self).__init__('active',1)
+        super(Active,self).__init__(u'active',1)
         
     def update(self,project):
         if not project.has_active_actions():
@@ -40,7 +40,7 @@ class Active(ProjectStatus):
     
 class Tickled(ProjectStatus):
     def __init__(self,date=date.tomorrow()):
-        super(Tickled,self).__init__('tickled',3,'/')
+        super(Tickled,self).__init__(u'tickled',3,'/')
         self.date = date
     
     def update(self,project):
@@ -55,19 +55,20 @@ class Tickled(ProjectStatus):
     def __repr__(self):
         return self.__str__()
 
-unprocessed = ProjectStatus('unprocessed',0)
+unprocessed = ProjectStatus(u'unprocessed',0)
 active = Active()
-done = ProjectStatus('done',2,'+')
+done = ProjectStatus(u'done',2,'+')
 tickled = Tickled()
 inactive = Inactive()
-someday = ProjectStatus('someday',5,'~')
-info = ProjectStatus('info',0)
+someday = ProjectStatus(u'someday',5,'~')
+info = ProjectStatus(u'info',0)
 
 
 
 class Project(ObservableItem,ItemWithStatus):
     observers = []
     def __init__(self,name,status = inactive):
+        assert type(name) == unicode
         logger.log(u'Creating project %s (%s)'%(name,status))
         ItemWithStatus.__init__(self,status)
         self.name=name
@@ -134,8 +135,7 @@ class Project(ObservableItem,ItemWithStatus):
         self.notify_observers('changed_info', info)
 
     def action_changed_content(self,action,content):
-        self.notify_observers('changed_action',action)
-        
+        self.notify_observers('changed_action',action)   
     
     def action_changed_status(self,a,status):
         self.notify_observers('changed_action', new=a, old=None)
@@ -155,4 +155,4 @@ class Project(ObservableItem,ItemWithStatus):
     def status_symbol_and_name(self):
         return self.status_symbol()+self.name
     def __repr__(self):
-        return 'Project %s (@%s, %s actions, %s infos)'%(self.name,self.status.name.capitalize(),len(self.actions),len(self.infos))
+        return u'Project %s (@%s, %s actions, %s infos)'%("Moeject",self.status.name.capitalize(),len(self.actions),len(self.infos))

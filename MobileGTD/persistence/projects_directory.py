@@ -1,6 +1,6 @@
 from inout.io import *
 from model.project import Project
-from project_file import ProjectFile
+#from project_file import ProjectFile
 import project_file
 from log.logging import logger
 def is_project(path):
@@ -38,9 +38,16 @@ class ProjectsDirectory:
                 p.add_action(a)
             for info in infos:    
                 p.add_info(info)
-            logger.log(u'Result %s'%repr(p))
+#            logger.log(u'Result %s'%repr(p))
 
     def notify(self,projects,attribute,new=None,old=None):
-        logger.log(u"ProjectsDirectory notified of %s | %s | %s"%(repr(projects),repr(attribute),repr(new)))
+        logger.log(repr(type(projects)))
+#        p_rep = repr(projects)
+#        a_rep = repr(attribute)
+#        n_rep = repr(new)
+#        logger.log(u"ProjectsDirectory notified of %s | %s | %s"%(p_rep,a_rep,n_rep))
         if attribute == 'add_item':
-            new.observers.append(ProjectFile(new)) 
+            p_file = project_file.ProjectFile(new)
+            new.observers.append(p_file)
+            p_file.write() 
+            

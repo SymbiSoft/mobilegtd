@@ -7,7 +7,7 @@ class FileLogger:
         self.file_path = file_path
         self.file_path = 'C:/Data/GTD/mobile_gtd.log'
         self.log_level = log_level
-        #self.log_file = file(file_path.encode('utf-8'),'w')
+        #self.log_file = file(io.os_encode(file_path),'w')
         io.create_file(self.file_path).close
         self.log_file = file(self.file_path,'a')
     def log_stderr(self):
@@ -22,7 +22,7 @@ class FileLogger:
         sys.stderr = self.old_stderr
     def log(self,text,level=0):
         if level < self.log_level:          
-            self.log_file.write(text.encode('utf-8')+'\n')
+            self.log_file.write(io.os_encode(text)+'\n')
             self.log_file.flush()
     def close(self):
         #sys.stderr.flush()

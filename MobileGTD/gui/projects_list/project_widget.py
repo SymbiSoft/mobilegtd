@@ -49,10 +49,11 @@ class ProjectWidget:
     
     def tickle(self):
         t = appuifw.query(u'Enter the date when the project should show up again', 'date', time.time())
-        date_struct = time.gmtime(t)
-        date = datetime.date(date_struct[0],date_struct[1],date_struct[2])
-        print date
-        self.project.status = project.Tickled(date)
+        if t:
+            date_struct = time.gmtime(t)
+            date = datetime.date(date_struct[0],date_struct[1],date_struct[2])
+            print date
+            self.project.status = project.Tickled(date)
     def defer(self):
         self.choose_and_execute(self.projects.get_someday_contexts(),self.projects.defer)
     def choose_and_execute(self,choices,function):

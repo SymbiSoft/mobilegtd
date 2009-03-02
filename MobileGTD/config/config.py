@@ -41,7 +41,7 @@ class Configuration(odict):
             self.write()
             self.read()
     def read(self):
-        encoded_path = self.file_path.encode('utf-8')
+        encoded_path = io.os_encode(self.file_path)
         if not os.path.isfile(encoded_path):
             logger.log(u'Configuration file %s does not exist'%os.path.abspath(encoded_path))
             return

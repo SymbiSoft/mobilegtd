@@ -1,14 +1,17 @@
+# coding: utf-8
 from mock import Mock
 import file_based_spec
 import unittest
 from persistence import project_file
-from persistence.project_file import ProjectFile,ProjectFileCreator
+from persistence.project_file import ProjectFile
 from model import project
 from model import action
 from model import info
 from model import datetime
 from persistence.action_file import ActionFile
 import os
+from inout import io
+
 
             
 
@@ -22,7 +25,7 @@ class ProjectFileBehaviour(file_based_spec.FileBasedBehaviour):
     def create_project(self):
         project = Mock()
         project.status = self.status()
-        project.name = 'some project'
+        project.name = u'some projectüß'
         project.actions = self.create_actions()
         project.observers = []
         self.info = Mock()
@@ -65,6 +68,12 @@ class ProjectFileBehaviour(file_based_spec.FileBasedBehaviour):
         self.assertTrue(has_added_action_file_as_observer(a))
 
 
+class ProjectFileWithNonAsciiCharacterName(ProjectFileBehaviour):
+    def create_project(self):
+        project = super(ProjectFileWithNonAsciiCharacterName,self).create_project()
+        project.name = u'some project with ümläutß'
+        return project
+    
 
 
 class ExistingProjectFileBehaviour:
@@ -77,7 +86,7 @@ class ExistingProjectFileBehaviour:
         old_status = self.project.status
         self.project.status = status
         self.project_file.notify(self.project, 'status', status,old_status)
-        self.assertTrue(os.path.isfile(self.path_in_subdirectory(subdir)),"Should have moved file to %s"%self.path_in_subdirectory(subdir))
+        self.assertTrue(os.path.isfile(io.os_encode(self.path_in_subdirectory(subdir))),"Should have moved file to %s"%self.path_in_subdirectory(subdir))
     
     def test_should_move_file_correctly_to_review_directory(self):
         self.assert_moved_file_to_correct_directory_if_status_changes(project.inactive,'@Review')
@@ -104,7 +113,8 @@ class ExistingProjectFileBehaviour:
 
     def test_should_write_if_notified_of_changes(self):
         self.project_file.notify(self.project, 'add_action', Mock(),None)        
-        assert os.path.isfile(self.path())
+        self.assertCreatedFile(self.path())
+
 
 
 
@@ -171,7 +181,8 @@ class ProjectFileReaderBehaviour(ProjectFileBehaviour,ExistingProjectFileBehavio
         return p
 
     def create_original_project(self):
-        return project.Project('Example Project')
+        self.project_name = u'Exämple Project'
+        return project.Project(self.project_name)
 
     def create_actions(self):
         return self.actions
@@ -180,7 +191,7 @@ class ProjectFileReaderBehaviour(ProjectFileBehaviour,ExistingProjectFileBehavio
         return self.project_file.path()
     
     def test_should_read_the_project_name_correctly(self):
-        self.assertEqual(self.project.name,'Example Project')
+        self.assertEqual(self.project.name,self.project_name)
 
     def test_should_infer_the_status_from_the_path(self):
         self.assertEqual(self.project.status,self.original_project.status)

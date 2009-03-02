@@ -1,6 +1,8 @@
 import unittest
 import os,tempfile,shutil
 import inout.io
+from inout import io
+
 
 class FileSystemBasedBehaviour(unittest.TestCase):
 	def setUp(self):
@@ -9,10 +11,15 @@ class FileSystemBasedBehaviour(unittest.TestCase):
 		os.chdir(self.tempdir)
 	def tearDown(self):
 		os.chdir(self.current_dir)
-		shutil.rmtree(self.tempdir,True)
+		#shutil.rmtree(self.tempdir,True)
 
 	def create_file(self,path):
 		inout.io.create_file(path).close()
+
+	def assertCreatedFile(self,path,error_message = None):
+		if not error_message:
+			error_message = u"The file %s should have been created"%repr(path)
+		self.assertTrue(os.path.isfile(io.os_encode(path)),error_message)
 
 class FileBasedBehaviour(FileSystemBasedBehaviour):
 
@@ -31,5 +38,6 @@ class FileBasedBehaviour(FileSystemBasedBehaviour):
 		if path == None:
 			path = self.path()
 		inout.io.write(path,content)
+
 
 __all__= ["FileBasedBehaviour","FileSystemBasedBehaviour"]

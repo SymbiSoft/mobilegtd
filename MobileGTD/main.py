@@ -7,6 +7,32 @@
 #tr.go()
 
 def run():
+    import sys
+    import e32
+    if e32.in_emulator():
+        sys.path.append('c:/python/')
+        
+        
+    import os.path
+    print sys.path
+#    print os.path.dirname(__file__)
+#    sys.path.append(os.path.dirname(__file__))
+    import log.logging
+    from log.logging import logger
+    import sys,os
+    logger.log_stderr()
+    sys.stderr.write('stderr logged from default')
+    
+    
+    
+    lock=None
+    
+    from config.config import gtd_directory,read_configurations
+    read_configurations()
+
+    from inout.io import safe_chdir
+    safe_chdir(gtd_directory)
+    print os.getcwd() 
     try:
         e32.ao_yield()
         import sys,os
@@ -55,27 +81,8 @@ def run():
         #appuifw.app.exit_key_handler=gui.exit
         lock.wait()
 
-if __name__ == "__main__":
-    import sys
-    import e32
-    if e32.in_emulator():
-        sys.path.append('c:/python/')
-    import log.logging
-    from log.logging import logger
-    import sys,os
-    logger.log_stderr()
-    sys.stderr.write('stderr logged from default')
-    
-    
-    
-    lock=None
-    
-    from config.config import gtd_directory,read_configurations
-    read_configurations()
-
-    from inout.io import safe_chdir
-    safe_chdir(gtd_directory)
-    print os.getcwd() 
-    run()
     logger.close()
+
+if __name__ == "__main__":
+    run()
 #tr.stop()
