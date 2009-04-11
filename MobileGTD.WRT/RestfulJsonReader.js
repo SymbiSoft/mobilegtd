@@ -1,3 +1,5 @@
+includeScript("json2.js");
+
 ///////////////////////////////////////////////////////////////////////////////
 // The RestfulJsonReader class implements a simple JSON fetcher and parser.
 
@@ -26,6 +28,24 @@ RestfulJsonReader.prototype.fetch = function(callback,path) {
     this.httpReq.send(null);
 }
 
+
+RestfulJsonReader.prototype.post = function(object,path) {
+    // initiate the request
+	var keyValuePairs = [];
+	for(var key in object) {
+		keyValuePairs[keyValuePairs.length] = ""+key+"="+object[key];
+	}
+	
+	var json = keyValuePairs.join("&");//JSON.stringify(object);
+    this.httpReq = new Ajax();
+    this.httpReq.open("POST", this.serverPath+path, true);
+	//Send the proper header information along with the request
+	this.httpReq.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+	this.httpReq.setRequestHeader("Content-length", json.length);
+	this.httpReq.setRequestHeader("Connection", "close");
+    this.httpReq.send(json);
+}
+
 // Callback for ready-state change events in the XML HTTP request.
 RestfulJsonReader.prototype.readyStateChanged = function() {
     // complete request?
@@ -45,7 +65,7 @@ RestfulJsonReader.prototype.readyStateChanged = function() {
 RestfulJsonReader.prototype.handleResponse = function(responseStatus, req) {
     if (responseStatus == 200 && req != null) {
         
-        var content = eval('('+req.responseText+')');
+        var content = JSON.parse(req.responseText);
         
         // update was completed successfully
         return { status: "ok", content: content };

@@ -23,7 +23,7 @@ function init(){
     restfulJsonReader = new RestfulJsonReader();
 	myMenu = new MenuCandidate();
     //create about menu
-    myMenu.addItem("Fetch projects",  menuItemSelected);
+    myMenu.addItem("Fetch projects",  fetchProjectsButtonClicked);
     // set tab-navigation mode and show softkeys
     // (only if we are in the WRT environment)
     if (window.widget) {
@@ -34,33 +34,26 @@ function init(){
     uiManager = new UIManager();
     windowManager = new WindowManager(uiManager);
     
-    projectsView = new ListView(null, "Edit Project");
+    projectsView = new ListView(null, "Projects");
 	projectsView.menu = myMenu;
     
-    nameField = new TextField(null, "Enter project name");
+    nameField = new TextField(null, "New project");
+	nameField.addEventListener("FocusStateChanged", function(event){
+		var focused = event.value;
+		if (!focused && nameField.getText()!="") {
+			restfulJsonReader.post({"name": nameField.getText()},"projects");
+			nameField.setText("");
+		}
+	});
+	nameField.addEventListener("ValueChanged", function(event){
+		alert(event.value);
+	});
+
     projectsView.addControl(nameField);
-    
-    // add a button to the view
-    addActionButton = new NavigationButton("Add action", null, "Add Action!");
-    addActionButton.addEventListener("ActionPerformed", addActionButtonClicked);
-    projectsView.addControl(addActionButton);
-    
-    var fetchProjectsButton = new FormButton(null, "Fetch Projects");
-    fetchProjectsButton.addEventListener("ActionPerformed", fetchProjectsButtonClicked);
-    
-    projectsView.addControl(fetchProjectsButton);
+	fetchProjectsButtonClicked();
     
     
     windowManager.open(projectsView);
-}
-
-// Callback for when menu items are selected.
-function menuItemSelected(id){
-    switch (id) {
-        case MENU_ITEM_READ_PROJECTS:
-            fetchProjectsButtonClicked(null);
-            break;
-    }
 }
 
 //Displays the About view
@@ -105,25 +98,54 @@ function editAction(name){
     
 }
 
+function unorderedListHtml(list) {
+	return "<ul><li>"+list.join("</li><li>")+"</li></ul>";
+}
+
+function editInfoButtonClicked(event){}
 
 function editProject(project){
     var name = project.name;
-    var projectView = new ListView(null, "Edit project");
+    var projectView = new ListView(null, name);
+    var nameField = new TextField(null, "Project name");
+	nameField.setText(name);
+	nameField.addEventListener("ValueChanged", function(event){
+		var path = "projects/"+project.id;
+		restfulJsonReader.post({"name":event.value},path);
+	});
+	projectView.addControl(nameField);
+	
+	for(var i in project.infos) {
+		infoButton = new NavigationButton(project.infos[i], null, project.infos[i]);
+		infoButton.addEventListener("ActionPerformed", editInfoButtonClicked);
+		projectView.addControl(infoButton);
+		
+	}
+	// add a button to the view
+    addActionButton = new NavigationButton("Add action", null, "Add Action!");
+    addActionButton.addEventListener("ActionPerformed", addActionButtonClicked);
+    projectView.addControl(addActionButton);
     if (project.actions) {
+		var actionsByContext = {};
         actions = project.actions;
         for (i = 0; i < project.actions.length; i++) {
 			action = project.actions[i];
-            var actionDescriptionControl = new TextField(null, "Action description",action.description , false);
-            var contextControl = new TextField(null, "Context", action.context, false);
-            projectView.addControl(actionDescriptionControl);
-            projectView.addControl(contextControl);
+			if (!actionsByContext[action.context]) {
+				actionsByContext[action.context]=[];
+			}
+			actionsByContext[action.context].push(action);
         }
+		for(var context in actionsByContext) {
+			var actions = actionsByContext[context];
+			var actionDescriptions = [];
+			for(var index in actions) {
+				actionDescriptions.push(actions[index].description);
+			}
+			var actionList = unorderedListHtml(actionDescriptions);
+	        projectView.addControl(new ContentPanel(null, "@" + context, actionList, true, true));		
+		}
     }
     projectView.closeHandler = function(){
-        var actionDescription = actionDescriptionControl.getText();
-        var context = contextControl.getText();
-        projectView.addControl(new ContentPanel(null, "@" + context + " " + actionDescription, "<label>Context:</label><br/>  @" + context + "<br/><label>Description:</label><br/>  " + actionDescription, true, true));
-        
     }
     windowManager.open(projectView);
 }
@@ -150,13 +172,28 @@ function fetchProject(index){
     restfulJsonReader.fetch(editProjectButtonClicked, "projects/" + index);
 }
 
-
+function compareByName(first,second) {
+	aa = first.name.toLowerCase();
+	bb = second.name.toLowerCase();
+	if (aa==bb) {
+		return 0;
+	}
+	if (aa<bb) {
+		return -1;
+	}
+	return 1;
+}
 
 function projectsReadCompleted(event){
-    var projects = event.content;
+    var projectNames = event.content;
+	var projects = [];
+	for(i in projectNames) {
+		projects[i]={"name":projectNames[i],"index":i};
+	}
+	projects.sort(compareByName);
     for (i = 0; i < projects.length; i++) {
         var projectName = projects[i];
-        projectsView.addControl(createProjectButton(i,projectName));
+        projectsView.addControl(createProjectButton(projectName.index,projectName.name));
     }
 }
 
@@ -175,5 +212,5 @@ document.onkeyup = keyUp;
 
 function keyUp(event){
     var pressedKey = event.keyCode - 48;
-	projectsView.addControl(new NavigationButton(null,"Pressed key "+pressedKey,"Pressed key "+pressedKey))
+	//projectsView.addControl(new NavigationButton(null,"Pressed key "+pressedKey,"Pressed key "+pressedKey))
 }
